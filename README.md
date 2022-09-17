@@ -43,10 +43,14 @@ Além disso, é aberto no browser do computador o site "blacktag.com" na aba de 
 Enquanto isso, os leds indicam que o sistema de controle da temperatura está funcional.
 
 ### Comandos/ Feedbacks (2 pts)
+**Comandos**:
+- **Botão power**: liga o dispositivo e pareia no bluetooth.      
+- **Microfone**: Entrada para os diversos comandos de voz do dispositivo, onde o usuário poderá colocar playlists no spotify e até mesmo gelar bebidas com comandos de voz.       
+- **Botões coloridos(3)**: Estes botões controlarão o spotify em aspectos que o comando de voz não é tão conveniente, como passar e voltar de música e pause/play.
 
-**Botão power**: liga o dispositivo e pareia no bluetooth.        
-**Microfone**: Entrada para os diversos comandos de voz do dispositivo, onde o usuário poderá colocar playlists no spotify e até mesmo gelar bebidas com comandos de voz.       
-**Botões coloridos(3)**: Estes botões controlarão o spotify em aspectos que o comando de voz não é tão conveniente, como passar e voltar de música e pause/play.
+**Feedbacks**:
+- O botão power da feedback para o usuário sobre o pareamento com as luzes presentes nele, ele ficará piscando até que o pareamento seja concluído.
+- O Led dá feedback sobre o funcionamento do sistema de cooling de bebida, ligando quando a célula peltier estiver ligada, e desligando quando estiver desligada.
 
 ## In/OUT (3 pts)
 
