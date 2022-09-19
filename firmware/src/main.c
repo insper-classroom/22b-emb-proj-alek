@@ -25,6 +25,18 @@
 #define BUT_IDX      11
 #define BUT_IDX_MASK (1 << BUT_IDX)
 
+// Botão verde - PROX musica
+#define BUT_PROX_PIO      PIOB
+#define BUT_PROX_PIO_ID   ID_PIOB
+#define BUT_PROX_IDX      3
+#define BUT_PROX_IDX_MASK (1 << BUT_PROX_IDX)
+
+// Botão vermelho - PAUSE/PLAY
+#define BUT_PAUSE_PIO      PIOA
+#define BUT_PAUSE_PIO_ID   ID_PIOA
+#define BUT_PAUSE_IDX      0
+#define BUT_PAUSE_IDX_MASK (1 << BUT_PAUSE_IDX)
+
 // usart (bluetooth ou serial)
 // Descomente para enviar dados
 // pela serial debug
@@ -112,10 +124,15 @@ void io_init(void) {
 	// Ativa PIOs
 	pmc_enable_periph_clk(LED_PIO_ID);
 	pmc_enable_periph_clk(BUT_PIO_ID);
+	pmc_enable_periph_clk(BUT_PROX_PIO_ID);
+	pmc_enable_periph_clk(BUT_PAUSE_PIO_ID);
 
 	// Configura Pinos
 	pio_configure(LED_PIO, PIO_OUTPUT_0, LED_IDX_MASK, PIO_DEFAULT | PIO_DEBOUNCE);
 	pio_configure(BUT_PIO, PIO_INPUT, BUT_IDX_MASK, PIO_PULLUP);
+	pio_configure(BUT_PROX_PIO, PIO_INPUT, BUT_PROX_IDX_MASK, PIO_PULLUP);
+	pio_configure(BUT_PAUSE_PIO, PIO_INPUT, BUT_PAUSE_IDX_MASK, PIO_PULLUP);
+	
 }
 
 static void configure_console(void) {
@@ -201,11 +218,11 @@ int hc05_init(void) {
 	vTaskDelay( 500 / portTICK_PERIOD_MS);
 	usart_send_command(USART_COM, buffer_rx, 1000, "AT", 100);
 	vTaskDelay( 500 / portTICK_PERIOD_MS);
-	usart_send_command(USART_COM, buffer_rx, 1000, "AT+NAMEagoravai", 100);
+	usart_send_command(USART_COM, buffer_rx, 1000, "AT+NAMEAlek", 100);
 	vTaskDelay( 500 / portTICK_PERIOD_MS);
 	usart_send_command(USART_COM, buffer_rx, 1000, "AT", 100);
 	vTaskDelay( 500 / portTICK_PERIOD_MS);
-	usart_send_command(USART_COM, buffer_rx, 1000, "AT+PIN0000", 100);
+	usart_send_command(USART_COM, buffer_rx, 1000, "AT+PIN1298", 100);
 }
 
 /************************************************************************/
@@ -230,9 +247,17 @@ void task_bluetooth(void) {
 		// atualiza valor do botão
 		if(pio_get(BUT_PIO, PIO_INPUT, BUT_IDX_MASK) == 0) {
 			button1 = '1';
-		} else {
+		}
+		else if (pio_get(BUT_PROX_PIO, PIO_INPUT, BUT_PROX_IDX_MASK) == 0) {
+			button1 = 'R';
+		}
+		else if (pio_get(BUT_PAUSE_PIO, PIO_INPUT, BUT_PAUSE_IDX_MASK) == 0) {
+			button1 = 'P';
+		}
+		else {
 			button1 = '0';
 		}
+		
 
 		// envia status botão
 		while(!usart_is_tx_ready(USART_COM)) {
