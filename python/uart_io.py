@@ -4,10 +4,6 @@ import argparse
 import time
 import logging
 
-class MyControllerMap:
-    def __init__(self):
-        self.button = {'A': 'L'} # Fast forward (10 seg) pro Youtube
-
 class SerialControllerInterface:
     # Protocolo
     # byte 1 -> Botão 1 (estado - Apertado 1 ou não 0)
@@ -15,7 +11,6 @@ class SerialControllerInterface:
 
     def __init__(self, port, baudrate):
         self.ser = serial.Serial(port, baudrate=baudrate)
-        self.mapping = MyControllerMap()
         self.incoming = '0'
         pyautogui.PAUSE = 0  ## remove delay
     
@@ -28,12 +23,15 @@ class SerialControllerInterface:
         data = self.ser.read()
         logging.debug("Received DATA: {}".format(data))
 
-        if data == b'1':
-            logging.info("KEYDOWN A")
-            pyautogui.keyDown(self.mapping.button['A'])
-        elif data == b'0':
-            logging.info("KEYUP A")
-            pyautogui.keyUp(self.mapping.button['A'])
+        if data == b'P':
+            print("Pause")
+            logging.info("PAUSE")
+        elif data == b'T':
+            print("Retro")
+            logging.info("RETROCEDER")
+        elif data == b'R':
+            print("AVANCAR")
+            logging.info("AVANCAR")
 
         self.incoming = self.ser.read()
 

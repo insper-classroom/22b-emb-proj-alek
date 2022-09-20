@@ -1276,6 +1276,12 @@
     <Compile Include="src\ASF\thirdparty\freertos\freertos-8.2.3\Source\timers.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\configs_io.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\configs_io.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\main.c">
       <SubType>compile</SubType>
     </Compile>

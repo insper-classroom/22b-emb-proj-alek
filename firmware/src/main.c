@@ -8,34 +8,13 @@
 #include <asf.h>
 #include "conf_board.h"
 #include <string.h>
+#include <configs_io.h>
 
 /************************************************************************/
 /* defines                                                              */
 /************************************************************************/
 
-// LEDs
-#define LED_PIO      PIOC
-#define LED_PIO_ID   ID_PIOC
-#define LED_IDX      8
-#define LED_IDX_MASK (1 << LED_IDX)
 
-// Botão
-#define BUT_PIO      PIOA
-#define BUT_PIO_ID   ID_PIOA
-#define BUT_IDX      11
-#define BUT_IDX_MASK (1 << BUT_IDX)
-
-// Botão verde - PROX musica
-#define BUT_PROX_PIO      PIOB
-#define BUT_PROX_PIO_ID   ID_PIOB
-#define BUT_PROX_IDX      3
-#define BUT_PROX_IDX_MASK (1 << BUT_PROX_IDX)
-
-// Botão vermelho - PAUSE/PLAY
-#define BUT_PAUSE_PIO      PIOA
-#define BUT_PAUSE_PIO_ID   ID_PIOA
-#define BUT_PAUSE_IDX      0
-#define BUT_PAUSE_IDX_MASK (1 << BUT_PAUSE_IDX)
 
 // usart (bluetooth ou serial)
 // Descomente para enviar dados
@@ -76,6 +55,9 @@ extern void xPortSysTickHandler(void);
 /************************************************************************/
 /* variaveis globais                                                    */
 /************************************************************************/
+volatile char but_pause_flag;
+volatile char but_retro_flag;
+volatile char but_prox_flag;
 
 /************************************************************************/
 /* RTOS application HOOK                                                */
@@ -118,22 +100,6 @@ extern void vApplicationMallocFailedHook(void) {
 /************************************************************************/
 /* funcoes                                                              */
 /************************************************************************/
-
-void io_init(void) {
-
-	// Ativa PIOs
-	pmc_enable_periph_clk(LED_PIO_ID);
-	pmc_enable_periph_clk(BUT_PIO_ID);
-	pmc_enable_periph_clk(BUT_PROX_PIO_ID);
-	pmc_enable_periph_clk(BUT_PAUSE_PIO_ID);
-
-	// Configura Pinos
-	pio_configure(LED_PIO, PIO_OUTPUT_0, LED_IDX_MASK, PIO_DEFAULT | PIO_DEBOUNCE);
-	pio_configure(BUT_PIO, PIO_INPUT, BUT_IDX_MASK, PIO_PULLUP);
-	pio_configure(BUT_PROX_PIO, PIO_INPUT, BUT_PROX_IDX_MASK, PIO_PULLUP);
-	pio_configure(BUT_PAUSE_PIO, PIO_INPUT, BUT_PAUSE_IDX_MASK, PIO_PULLUP);
-	
-}
 
 static void configure_console(void) {
 	const usart_serial_options_t uart_serial_options = {
@@ -248,11 +214,17 @@ void task_bluetooth(void) {
 		if(pio_get(BUT_PIO, PIO_INPUT, BUT_IDX_MASK) == 0) {
 			button1 = '1';
 		}
-		else if (pio_get(BUT_PROX_PIO, PIO_INPUT, BUT_PROX_IDX_MASK) == 0) {
+		else if (but_prox_flag) {
+			but_prox_flag = 0;
 			button1 = 'R';
 		}
-		else if (pio_get(BUT_PAUSE_PIO, PIO_INPUT, BUT_PAUSE_IDX_MASK) == 0) {
+		else if (but_pause_flag) {
+			but_pause_flag = 0;
 			button1 = 'P';
+		}
+		else if (but_retro_flag) {
+			but_retro_flag = 0;
+			button1 = 'T';
 		}
 		else {
 			button1 = '0';
