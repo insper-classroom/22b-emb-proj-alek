@@ -46,9 +46,23 @@ extern volatile char but_prox_flag;
 #define BUT_RETRO_IDX      31
 #define BUT_RETRO_IDX_MASK (1 << BUT_RETRO_IDX)
 
+// Sound detector
+/* AFEC */
+#define AFEC_POT AFEC0
+#define AFEC_POT_ID ID_AFEC0
+#define AFEC_POT_CHANNEL 0 // Canal do pino PD30
+
+// Gate do sound detector
+#define GATE_PIO PIOA
+#define GATE_PIO_ID ID_PIOA
+#define GATE_IDX 6
+#define GATE_IDX_MASK (1 << GATE_IDX)
+
+
 void io_init(void);
 void but_retro_callback(void);
 void but_prox_callback(void);
 void but_pause_callback(void);
+void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel, afec_callback_t callback)
 
 #endif /* CONFIGS_IO_H_ */
