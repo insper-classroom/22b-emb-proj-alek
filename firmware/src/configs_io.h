@@ -63,6 +63,11 @@ void io_init(void);
 void but_retro_callback(void);
 void but_prox_callback(void);
 void but_pause_callback(void);
+static void AFEC_pot_Callback(void);
 void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel, afec_callback_t callback)
+
+typedef struct {
+	uint value;
+} adcData;
 
 #endif /* CONFIGS_IO_H_ */

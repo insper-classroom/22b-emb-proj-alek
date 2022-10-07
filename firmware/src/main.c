@@ -9,6 +9,7 @@
 #include "conf_board.h"
 #include <string.h>
 #include <configs_io.h>
+#include "sound_capture.h"
 
 /************************************************************************/
 /* defines                                                              */
