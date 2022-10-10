@@ -6,7 +6,7 @@
  */
 
 #include "conf_board.h"
-#include "sound_capture.h"
+// #include "sound_capture.h"
 #include <asf.h>
 #include <configs_io.h>
 #include <string.h>
@@ -28,6 +28,10 @@
 #define USART_COM USART0
 #define USART_COM_ID ID_USART0
 #endif
+
+#define AFEC_POT AFEC0
+#define AFEC_POT_ID ID_AFEC0
+#define AFEC_POT_CHANNEL 0 // Canal do pino PD30
 
 /************************************************************************/
 /* RTOS                                                                 */
@@ -55,6 +59,8 @@ extern void vApplicationIdleHook(void);
 extern void vApplicationTickHook(void);
 extern void vApplicationMallocFailedHook(void);
 extern void xPortSysTickHandler(void);
+void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource);
+static void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel, afec_callback_t callback);
 
 /************************************************************************/
 /* constants                                                            */
@@ -65,6 +71,7 @@ extern void xPortSysTickHandler(void);
 /************************************************************************/
 uint32_t *g_sdram = (uint32_t *)BOARD_SDRAM_ADDR;
 volatile uint32_t sdram_count = 0;
+volatile _Bool gravando = 0;
 
 /************************************************************************/
 /* RTOS application HOOK                                                */
@@ -105,16 +112,59 @@ extern void vApplicationMallocFailedHook(void) {
 /************************************************************************/
 
 // Esse callback deve ser chamado quando o GATE ficar em estado logico baixo por 500ms.
-void vTimerSoundCallback(TimerHandle_t xTimer) {
+void vTimerCallbackSound(TimerHandle_t xTimer) {
     // Desabilita o RTT -> Para a captura de som.
-    rtt_disable_interrupt(RTT, RTT_MR_ALMIEN);
-    rtt_disable(RTT);
+    // rtt_disable_interrupt(RTT, RTT_MR_ALMIEN);
+    // rtt_disable(RTT);
 
     // Desabilita o AFEC
-    afec_disable_interrupt(AFEC_POT, AFEC_POT_CHANNEL);
+    // afec_disable_interrupt(AFEC_POT, AFEC_POT_CHANNEL);
 
     // Libera o semaforo do gate.
     xSemaphoreGiveFromISR(xSemaphoreGate, 0);
+}
+
+void but_callback(void) {
+	if (!pio_get(BUT_PIO, PIO_INPUT, BUT_IDX_MASK)) {
+		RTT_init(FREQ, 6000, RTT_MR_ALMIEN | RTT_MR_RTTINCIEN);
+		
+		printf("Press!\n");
+		
+		afec_channel_enable(AFEC_POT, AFEC_POT_CHANNEL);
+		afec_start_software_conversion(AFEC_POT);
+		
+		} else {
+		// xSemaphoreGiveFromISR(xSemaphoreGate, 0);
+		printf("Releas\n");
+	}
+}
+
+static void AFEC_pot_callback(void) {
+	/*
+	printf("Chega afec\n");
+	uint32_t valor =  afec_channel_get_value(AFEC_POT, AFEC_POT_CHANNEL);
+	printf("Valor = %u\n", valor);
+	*/
+	xSemaphoreGiveFromISR(xSemaphoreGate, 0);
+    // Semaforo que indica o fim da captura.
+    /*if (xSemaphoreTake(xSemaphoreGate, 0) == pdFALSE) {
+        // Enquanto o gate nao ficar em nivel logico 0, continua a leitura do audio
+		uint32_t valor =  afec_channel_get_value(AFEC_POT, AFEC_POT_CHANNEL);
+		printf("Valor = %u\n", valor);
+		
+        // *(g_sdram + sdram_count) = afec_channel_get_value(AFEC_POT, AFEC_POT_CHANNEL);
+        // sdram_count++;
+    } else {
+		printf("AHHHHHHHHHHHHHHHHHHHHHHHHH\n");
+        // Disabilita afec e zera a contagem do sdram
+        afec_disable_interrupt(AFEC_POT, AFEC_POT_CHANNEL);
+        // TODO: Idealizar como fazer um envio simultaneo, sem que tenha que parar o envio de audio
+        // Idea: Fazer um semaforo aqui para mandar o ultimo endereço de memoria que
+        // foi gravado esse bloco de audio
+        // E continuar a gravar no proximo bloco de memoria nesse endeco + 1.
+        // Quando estourar o tamanho do sdram, volta para o inicio.
+        // sdram_count = 0;
+    }*/
 }
 
 /************************************************************************/
@@ -210,11 +260,117 @@ int hc05_init(void) {
     usart_send_command(USART_COM, buffer_rx, 1000, "AT+PIN1298", 100);
 }
 
+/**
+ * Configura RTT
+ *
+ * arg0 pllPreScale  : Frequ�ncia na qual o contador ir� incrementar
+ * arg1 IrqNPulses   : Valor do alarme
+ * arg2 rttIRQSource : Pode ser uma
+ *     - 0:
+ *     - RTT_MR_RTTINCIEN: Interrup��o por incremento (pllPreScale)
+ *     - RTT_MR_ALMIEN : Interrup��o por alarme
+ */
+void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource) {
+
+    uint16_t pllPreScale = (int)(((float)32768) / freqPrescale);
+
+    rtt_sel_source(RTT, false);
+    rtt_init(RTT, pllPreScale);
+
+    if (rttIRQSource & RTT_MR_ALMIEN) {
+        uint32_t ul_previous_time;
+        ul_previous_time = rtt_read_timer_value(RTT);
+        while (ul_previous_time == rtt_read_timer_value(RTT))
+            ;
+        rtt_write_alarm_time(RTT, IrqNPulses + ul_previous_time);
+    }
+
+    /* config NVIC */
+    NVIC_DisableIRQ(RTT_IRQn);
+    NVIC_ClearPendingIRQ(RTT_IRQn);
+    NVIC_SetPriority(RTT_IRQn, 4);
+    NVIC_EnableIRQ(RTT_IRQn);
+
+    /* Enable RTT interrupt */
+    if (rttIRQSource & (RTT_MR_RTTINCIEN | RTT_MR_ALMIEN))
+        rtt_enable_interrupt(RTT, rttIRQSource);
+    else
+        rtt_disable_interrupt(RTT, RTT_MR_RTTINCIEN | RTT_MR_ALMIEN);
+}
+
+static void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel,
+                            afec_callback_t callback) {
+  /*************************************
+   * Ativa e configura AFEC
+   *************************************/
+  /* Ativa AFEC - 0 */
+  afec_enable(afec);
+
+  /* struct de configuracao do AFEC */
+  struct afec_config afec_cfg;
+
+  /* Carrega parametros padrao */
+  afec_get_config_defaults(&afec_cfg);
+
+  /* Configura AFEC */
+  afec_init(afec, &afec_cfg);
+
+  /* Configura trigger por software */
+  afec_set_trigger(afec, AFEC_TRIG_SW);
+
+  /*** Configuracao específica do canal AFEC ***/
+  struct afec_ch_config afec_ch_cfg;
+  afec_ch_get_config_defaults(&afec_ch_cfg);
+  afec_ch_cfg.gain = AFEC_GAINVALUE_0;
+  afec_ch_set_config(afec, afec_channel, &afec_ch_cfg);
+
+  /*
+  * Calibracao:
+  * Because the internal ADC offset is 0x200, it should cancel it and shift
+  down to 0.
+  */
+  afec_channel_set_analog_offset(afec, afec_channel, 0x200);
+
+  /***  Configura sensor de temperatura ***/
+  struct afec_temp_sensor_config afec_temp_sensor_cfg;
+
+  afec_temp_sensor_get_config_defaults(&afec_temp_sensor_cfg);
+  afec_temp_sensor_set_config(afec, &afec_temp_sensor_cfg);
+
+  /* configura IRQ */
+  afec_set_callback(afec, afec_channel, callback, 1);
+  NVIC_SetPriority(afec_id, 4);
+  NVIC_EnableIRQ(afec_id);
+}
+
+void RTT_Handler(void) {
+    uint32_t ul_status;
+    ul_status = rtt_get_status(RTT);
+
+    // Captura o audio
+   
+
+
+	 /* IRQ due to Alarm */
+	 if ((ul_status & RTT_SR_RTTINC) == RTT_SR_RTTINC) {
+		 //printf("Test\n");
+		 
+	 }
+	 
+    /* IRQ due to Alarm */
+    if ((ul_status & RTT_SR_ALMS) == RTT_SR_ALMS) {
+		printf("ALARME\n");
+		afec_channel_enable(AFEC_POT, AFEC_POT_CHANNEL);
+		afec_start_software_conversion(AFEC_POT);
+    }
+}
+
 /************************************************************************/
 /* TASKS                                                                */
 /************************************************************************/
 
 void task_bluetooth(void) {
+	// afec_channel_enable(AFEC_POT, AFEC_POT_CHANNEL);
     printf("Task Bluetooth started \n");
 
     printf("Inicializando HC05 \n");
@@ -225,11 +381,13 @@ void task_bluetooth(void) {
     io_init();
 
     // Configura o timer
-    xTimerSound = xTimerCreate("TimerSound",
+    /*
+	xTimerSound = xTimerCreate("TimerSound",
                                500 / portTICK_PERIOD_MS,
                                pdFALSE,
                                (void *)0,
                                vTimerCallbackSound);
+	*/
 
     char button1 = '0';
     char eof = 'X';
@@ -258,6 +416,8 @@ void task_bluetooth(void) {
         // TODO: Implementar aqui o envio de audio via bluetooth.
         if (xSemaphoreTake(xSemaphoreGate, 0) == pdTRUE) {
             // Aqui a lógica para enviar o audio via bluetooth.
+			printf("ENtrou no gate\n");
+			continue;
         }
     }
 }
@@ -272,12 +432,19 @@ int main(void) {
     board_init();
 
     configure_console();
+	
+	config_AFEC_pot(AFEC_POT, AFEC_POT_ID, AFEC_POT_CHANNEL, AFEC_pot_callback);
 
     // Cria a queue de input
     xQueueInput = xQueueCreate(10, sizeof(char));
     if (xQueueInput == NULL) {
         printf("Erro ao criar a queue de input \n");
     }
+	
+    xSemaphoreGate = xSemaphoreCreateBinary();
+	if (xSemaphoreGate == NULL)
+		printf("Erro ao criar o semaforo do gate\n");
+
 
     /* Create task to make led blink */
     xTaskCreate(task_bluetooth, "BLT", TASK_BLUETOOTH_STACK_SIZE, NULL, TASK_BLUETOOTH_STACK_PRIORITY, NULL);

@@ -14,10 +14,10 @@ extern xSemaphoreHandle xSemaphoreGate;
 
 // Variaveis globais -> ver como se livrar delas.
 extern volatile uint32_t sdram_count;
-extern *g_sdram = (uint32_t *)BOARD_SDRAM_ADDR;
+extern uint32_t *g_sdram;
 
-static void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource);
+void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource);
 void RTT_Handler(void);
-static void AFEC_pot_Callback(void);
+// void static AFEC_pot_Callback(void);
 
 #endif /* SOUND_CAPTURE_H_ */

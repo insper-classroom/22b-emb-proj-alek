@@ -27,6 +27,6 @@ typedef struct {
         0xff -> Resposta de OK.
 */
 
-package pack(char *values_array, int start_value, int payload_size, int n_payload);
+package pack(char *values_array, int start_value, int payload_size, int n_payloads);
 
 #endif /* COMMUNICATION_H_ */

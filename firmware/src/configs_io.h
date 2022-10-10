@@ -13,6 +13,15 @@
 // Variaveis do RTOS externas
 extern QueueHandle_t xQueueInput;
 extern TimerHandle_t xTimerSound;
+extern volatile _Bool gravando;
+extern SemaphoreHandle_t xSemaphoreGate;
+extern void but_callback(void);
+// extern void AFEC_pot_Callback(void);
+extern void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource);
+
+// Teste afec
+// static void AFEC_pot_Callback(void);
+
 
 // LEDs
 #define LED_PIO PIOC
@@ -46,9 +55,7 @@ extern TimerHandle_t xTimerSound;
 
 // Sound detector
 /* AFEC */
-#define AFEC_POT AFEC0
-#define AFEC_POT_ID ID_AFEC0
-#define AFEC_POT_CHANNEL 0 // Canal do pino PD30
+
 
 // Gate do sound detector
 #define GATE_PIO PIOA
@@ -56,11 +63,15 @@ extern TimerHandle_t xTimerSound;
 #define GATE_IDX 6
 #define GATE_IDX_MASK (1 << GATE_IDX)
 
+// Freq de amostragem
+#define FREQ 6000
+
 void io_init(void);
+void but_callback(void);
 void but_retro_callback(void);
 void but_prox_callback(void);
 void but_pause_callback(void);
 void gate_callback(void);
-void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel, afec_callback_t callback);
+// void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel, afec_callback_t callback);
 
 #endif /* CONFIGS_IO_H_ */
