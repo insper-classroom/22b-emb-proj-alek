@@ -2,9 +2,8 @@
  * sound_capture.h
  *
  * Created: 10/5/2022 10:50:09 PM
- *  Author: riywa
- */ 
-
+ *  Author: Ricardo Ribeiro Rodrigues
+ */
 
 #ifndef SOUND_CAPTURE_H_
 #define SOUND_CAPTURE_H_
@@ -14,7 +13,7 @@
 extern xSemaphoreHandle xSemaphoreGate;
 
 // Variaveis globais -> ver como se livrar delas.
-extern volatile uint32_t sdram_count = 0 ;
+extern volatile uint32_t sdram_count;
 extern *g_sdram = (uint32_t *)BOARD_SDRAM_ADDR;
 
 static void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource);
