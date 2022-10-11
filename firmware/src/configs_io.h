@@ -12,12 +12,12 @@
 
 // Variaveis do RTOS externas
 extern QueueHandle_t xQueueInput;
-extern TimerHandle_t xTimerSound;
-extern volatile _Bool gravando;
-extern SemaphoreHandle_t xSemaphoreGate;
-extern void but_callback(void);
+// extern TimerHandle_t xTimerSound;
+// extern volatile _Bool gravando;
+// extern SemaphoreHandle_t xSemaphoreGate;
+// extern void but_callback(void);
 // extern void AFEC_pot_Callback(void);
-extern void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource);
+// extern void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource);
 
 // Teste afec
 // static void AFEC_pot_Callback(void);
@@ -64,7 +64,7 @@ extern void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSou
 #define GATE_IDX_MASK (1 << GATE_IDX)
 
 // Freq de amostragem
-#define FREQ 6000
+#define FREQ 11000
 
 void io_init(void);
 void but_callback(void);

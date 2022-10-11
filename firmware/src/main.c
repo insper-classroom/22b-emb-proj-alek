@@ -44,7 +44,7 @@
 QueueHandle_t xQueueInput;
 
 // Timer para terminar a captura de som
-TimerHandle_t xTimerSound;
+// TimerHandle_t xTimerSound;
 
 // Semaforo para o fim da captura de som
 SemaphoreHandle_t xSemaphoreGate;
@@ -69,9 +69,9 @@ static void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel,
 /************************************************************************/
 /* variaveis globais                                                    */
 /************************************************************************/
-uint32_t *g_sdram = (uint32_t *)BOARD_SDRAM_ADDR;
-volatile uint32_t sdram_count = 0;
-volatile _Bool gravando = 0;
+// uint32_t *g_sdram = (uint32_t *)BOARD_SDRAM_ADDR;
+// volatile uint32_t sdram_count = 0;
+// volatile _Bool gravando = 0;
 
 /************************************************************************/
 /* RTOS application HOOK                                                */
@@ -128,24 +128,22 @@ void but_callback(void) {
 	if (!pio_get(BUT_PIO, PIO_INPUT, BUT_IDX_MASK)) {
 		RTT_init(FREQ, 6000, RTT_MR_ALMIEN | RTT_MR_RTTINCIEN);
 		
-		printf("Press!\n");
 		
 		afec_channel_enable(AFEC_POT, AFEC_POT_CHANNEL);
 		afec_start_software_conversion(AFEC_POT);
 		
-		} else {
+	} else {
 		// xSemaphoreGiveFromISR(xSemaphoreGate, 0);
-		printf("Releas\n");
 	}
 }
 
-static void AFEC_pot_callback(void) {
+// static void AFEC_pot_callback(void) {
 	/*
 	printf("Chega afec\n");
 	uint32_t valor =  afec_channel_get_value(AFEC_POT, AFEC_POT_CHANNEL);
 	printf("Valor = %u\n", valor);
 	*/
-	xSemaphoreGiveFromISR(xSemaphoreGate, 0);
+	// xSemaphoreGiveFromISR(xSemaphoreGate, 0);
     // Semaforo que indica o fim da captura.
     /*if (xSemaphoreTake(xSemaphoreGate, 0) == pdFALSE) {
         // Enquanto o gate nao ficar em nivel logico 0, continua a leitura do audio
@@ -165,6 +163,14 @@ static void AFEC_pot_callback(void) {
         // Quando estourar o tamanho do sdram, volta para o inicio.
         // sdram_count = 0;
     }*/
+// }
+static void AFEC_pot_callback(void) {
+	// adcData adc;
+	uint32_t value = afec_channel_get_value(AFEC_POT, AFEC_POT_CHANNEL);
+	printf("%d\n", value);
+	BaseType_t xHigherPriorityTaskWoken = pdTRUE;
+	// xQueueSendFromISR(xQueueADC, &adc, &xHigherPriorityTaskWoken);
+	xSemaphoreGiveFromISR(xSemaphoreGate, &xHigherPriorityTaskWoken);
 }
 
 /************************************************************************/
@@ -354,14 +360,14 @@ void RTT_Handler(void) {
 	 /* IRQ due to Alarm */
 	 if ((ul_status & RTT_SR_RTTINC) == RTT_SR_RTTINC) {
 		 //printf("Test\n");
-		 
+		 afec_channel_enable(AFEC_POT, AFEC_POT_CHANNEL);
+		 afec_start_software_conversion(AFEC_POT);
 	 }
 	 
     /* IRQ due to Alarm */
     if ((ul_status & RTT_SR_ALMS) == RTT_SR_ALMS) {
-		printf("ALARME\n");
-		afec_channel_enable(AFEC_POT, AFEC_POT_CHANNEL);
-		afec_start_software_conversion(AFEC_POT);
+		// printf("ALARME\n");
+		
     }
 }
 
@@ -379,6 +385,9 @@ void task_bluetooth(void) {
 
     // configura LEDs e Botões
     io_init();
+	
+	afec_channel_enable(AFEC_POT, AFEC_POT_CHANNEL);
+	afec_start_software_conversion(AFEC_POT);
 
     // Configura o timer
     /*
@@ -416,8 +425,8 @@ void task_bluetooth(void) {
         // TODO: Implementar aqui o envio de audio via bluetooth.
         if (xSemaphoreTake(xSemaphoreGate, 0) == pdTRUE) {
             // Aqui a lógica para enviar o audio via bluetooth.
-			printf("ENtrou no gate\n");
-			continue;
+			// printf("ENtrou no gate\n");
+			// continue;
         }
     }
 }
@@ -447,7 +456,9 @@ int main(void) {
 
 
     /* Create task to make led blink */
-    xTaskCreate(task_bluetooth, "BLT", TASK_BLUETOOTH_STACK_SIZE, NULL, TASK_BLUETOOTH_STACK_PRIORITY, NULL);
+	if (xTaskCreate(task_bluetooth, "BLT", TASK_BLUETOOTH_STACK_SIZE, NULL, TASK_BLUETOOTH_STACK_PRIORITY, NULL) != pdPASS) {
+		printf("Failed to create task BLT\r\n");
+	}
 
     /* Start the scheduler. */
     vTaskStartScheduler();
