@@ -69,8 +69,8 @@ static void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel,
 /************************************************************************/
 /* variaveis globais                                                    */
 /************************************************************************/
-// uint32_t *g_sdram = (uint32_t *)BOARD_SDRAM_ADDR;
-// volatile uint32_t sdram_count = 0;
+uint32_t *g_sdram = (uint32_t *)BOARD_SDRAM_ADDR;
+volatile uint32_t sdram_count = 0;
 // volatile _Bool gravando = 0;
 
 /************************************************************************/
@@ -128,11 +128,9 @@ void but_callback(void) {
 	if (!pio_get(BUT_PIO, PIO_INPUT, BUT_IDX_MASK)) {
 		RTT_init(FREQ, 6000, RTT_MR_ALMIEN | RTT_MR_RTTINCIEN);
 		
-		
-		afec_channel_enable(AFEC_POT, AFEC_POT_CHANNEL);
-		afec_start_software_conversion(AFEC_POT);
-		
 	} else {
+		// Para de coletar o audio
+		rtt_disable_interrupt(RTT, RTT_MR_ALMIEN | RTT_MR_RTTINCIEN);
 		// xSemaphoreGiveFromISR(xSemaphoreGate, 0);
 	}
 }
@@ -165,7 +163,6 @@ void but_callback(void) {
     }*/
 // }
 static void AFEC_pot_callback(void) {
-	// adcData adc;
 	uint32_t value = afec_channel_get_value(AFEC_POT, AFEC_POT_CHANNEL);
 	printf("%d\n", value);
 	BaseType_t xHigherPriorityTaskWoken = pdTRUE;
@@ -353,13 +350,10 @@ void RTT_Handler(void) {
     uint32_t ul_status;
     ul_status = rtt_get_status(RTT);
 
-    // Captura o audio
    
-
-
-	 /* IRQ due to Alarm */
+	 /* IRQ due to Inc */
 	 if ((ul_status & RTT_SR_RTTINC) == RTT_SR_RTTINC) {
-		 //printf("Test\n");
+		 // Coleta do audio do microfone usando o AFEC1
 		 afec_channel_enable(AFEC_POT, AFEC_POT_CHANNEL);
 		 afec_start_software_conversion(AFEC_POT);
 	 }

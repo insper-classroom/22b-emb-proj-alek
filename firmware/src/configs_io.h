@@ -64,7 +64,7 @@ extern QueueHandle_t xQueueInput;
 #define GATE_IDX_MASK (1 << GATE_IDX)
 
 // Freq de amostragem
-#define FREQ 11000
+#define FREQ 8000
 
 void io_init(void);
 void but_callback(void);
