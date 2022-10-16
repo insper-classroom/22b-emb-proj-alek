@@ -29,13 +29,13 @@ extern QueueHandle_t xQueueInput;
 #define LED_IDX 8
 #define LED_IDX_MASK (1 << LED_IDX)
 
-// Bot�o
+// Botao da placa
 #define BUT_PIO PIOA
 #define BUT_PIO_ID ID_PIOA
 #define BUT_IDX 11
 #define BUT_IDX_MASK (1 << BUT_IDX)
 
-// Bot�o verde - PROX musica
+// Botao verde - PROX musica
 #define BUT_PROX_PIO PIOB
 #define BUT_PROX_PIO_ID ID_PIOB
 #define BUT_PROX_IDX 3
@@ -47,7 +47,7 @@ extern QueueHandle_t xQueueInput;
 #define BUT_PAUSE_IDX 0
 #define BUT_PAUSE_IDX_MASK (1 << BUT_PAUSE_IDX)
 
-// Bot�o amarelo -> Retroceder musica
+// Botao amarelo -> Retroceder musica
 #define BUT_RETRO_PIO PIOC
 #define BUT_RETRO_PIO_ID ID_PIOC
 #define BUT_RETRO_IDX 31
@@ -55,6 +55,9 @@ extern QueueHandle_t xQueueInput;
 
 // Sound detector
 /* AFEC */
+#define AFEC_POT AFEC0
+#define AFEC_POT_ID ID_AFEC0
+#define AFEC_POT_CHANNEL 0 // Canal do pino PD30
 
 
 // Gate do sound detector

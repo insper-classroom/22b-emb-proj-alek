@@ -56,12 +56,16 @@ void io_init(void) {
 
     // Configura Pinos
     pio_configure(LED_PIO, PIO_OUTPUT_0, LED_IDX_MASK, PIO_DEFAULT);
+	
     pio_configure(BUT_PIO, PIO_INPUT, BUT_IDX_MASK, PIO_PULLUP | PIO_DEBOUNCE);
 	pio_set_debounce_filter(BUT_PIO, BUT_IDX_MASK, 60);
+	
     pio_configure(BUT_PROX_PIO, PIO_INPUT, BUT_PROX_IDX_MASK, PIO_PULLUP | PIO_DEBOUNCE);
 	pio_set_debounce_filter(BUT_PROX_PIO, BUT_PROX_IDX_MASK, 60);
+	
     pio_configure(BUT_PAUSE_PIO, PIO_INPUT, BUT_PAUSE_IDX_MASK, PIO_PULLUP | PIO_DEBOUNCE);
 	pio_set_debounce_filter(BUT_PAUSE_PIO, BUT_PAUSE_IDX_MASK, 60);
+	
     pio_configure(BUT_RETRO_PIO, PIO_INPUT, BUT_RETRO_IDX_MASK, PIO_PULLUP | PIO_DEBOUNCE);
 	pio_set_debounce_filter(BUT_RETRO_PIO, BUT_RETRO_IDX_MASK, 60);
 
@@ -120,7 +124,7 @@ void io_init(void) {
     pio_get_interrupt_status(GATE_PIO);
 
     // Configura NVIC para receber interrupcoes do PIO do botao start/pause
-    // com prioridade 4 (quanto mais pr�ximo de 0 maior)
+    // com prioridade 4 (quanto mais proximo de 0 maior)
     NVIC_EnableIRQ(BUT_PROX_PIO_ID);
     NVIC_SetPriority(BUT_PROX_PIO_ID, 4);
 

@@ -28,9 +28,6 @@
 #define USART_COM_ID ID_USART0
 #endif
 
-#define AFEC_POT AFEC0
-#define AFEC_POT_ID ID_AFEC0
-#define AFEC_POT_CHANNEL 0 // Canal do pino PD30
 
 /************************************************************************/
 /* RTOS                                                                 */
@@ -131,6 +128,9 @@ void vTimerCallbackSound(TimerHandle_t xTimer) {
 void but_callback(void) {
 	if ((!pio_get(BUT_PIO, PIO_INPUT, BUT_IDX_MASK)) && (!enviando)) {
 		RTT_init(FREQ, 6000, RTT_MR_ALMIEN | RTT_MR_RTTINCIEN);
+		afec_enable_interrupt(AFEC_POT, AFEC_POT_CHANNEL);
+		sdram_count = 0;
+		compara = 0;
 	} else {
 		// Para de coletar o audio
 		rtt_disable_interrupt(RTT, RTT_MR_ALMIEN | RTT_MR_RTTINCIEN);
@@ -139,33 +139,6 @@ void but_callback(void) {
 	}
 }
 
-// static void AFEC_pot_callback(void) {
-	/*
-	printf("Chega afec\n");
-	uint32_t valor =  afec_channel_get_value(AFEC_POT, AFEC_POT_CHANNEL);
-	printf("Valor = %u\n", valor);
-	*/
-	// xSemaphoreGiveFromISR(xSemaphoreGate, 0);
-    // Semaforo que indica o fim da captura.
-    /*if (xSemaphoreTake(xSemaphoreGate, 0) == pdFALSE) {
-        // Enquanto o gate nao ficar em nivel logico 0, continua a leitura do audio
-		uint32_t valor =  afec_channel_get_value(AFEC_POT, AFEC_POT_CHANNEL);
-		printf("Valor = %u\n", valor);
-		
-        // *(g_sdram + sdram_count) = afec_channel_get_value(AFEC_POT, AFEC_POT_CHANNEL);
-        // sdram_count++;
-    } else {
-		printf("AHHHHHHHHHHHHHHHHHHHHHHHHH\n");
-        // Disabilita afec e zera a contagem do sdram
-        afec_disable_interrupt(AFEC_POT, AFEC_POT_CHANNEL);
-        // TODO: Idealizar como fazer um envio simultaneo, sem que tenha que parar o envio de audio
-        // Idea: Fazer um semaforo aqui para mandar o ultimo endereço de memoria que
-        // foi gravado esse bloco de audio
-        // E continuar a gravar no proximo bloco de memoria nesse endeco + 1.
-        // Quando estourar o tamanho do sdram, volta para o inicio.
-        // sdram_count = 0;
-    }*/
-// }
 static void AFEC_pot_callback(void) {
 	uint16_t value = afec_channel_get_value(AFEC_POT, AFEC_POT_CHANNEL);
 	BaseType_t xHigherPriorityTaskWoken = pdTRUE;
@@ -395,7 +368,7 @@ void task_bluetooth(void) {
                                vTimerCallbackSound);
 	*/
 
-    char button1 = '0';
+    char button = '0';
     char eof = 'X';
 	*(g_sdram) = 100;
 	*(g_sdram + 1) = 200;
@@ -407,14 +380,14 @@ void task_bluetooth(void) {
     // Task não deve retornar.
     while (1) {
         // atualiza valor do botão e envia apenas quando o valor muda atravez da fila.
-        if (xQueueReceive(xQueueInput, &button1, 0)) {
-            printf("Botao 1: %c \n", button1);
+        if (xQueueReceive(xQueueInput, &button, 0)) {
+            printf("Botao 1: %c \n", button);
 
             // envia status botão
             while (!usart_is_tx_ready(USART_COM)) {
                 vTaskDelay(10 / portTICK_PERIOD_MS);
             }
-            usart_write(USART_COM, button1);
+            usart_write(USART_COM, button);
 
             // envia fim de pacote
             while (!usart_is_tx_ready(USART_COM)) {
