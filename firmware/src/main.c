@@ -5,10 +5,9 @@
  *
  */
 
-#include "conf_board.h"
-// #include "sound_capture.h"
-#include <asf.h>
+#include <is42s16100e.h>
 #include <configs_io.h>
+// #include "sound_capture.h"
 #include <string.h>
 
 /************************************************************************/
@@ -43,6 +42,9 @@
 // Queue para inputs dos botoes
 QueueHandle_t xQueueInput;
 
+// Queue para dados do microfone
+QueueHandle_t xQueueAmostras;
+
 // Timer para terminar a captura de som
 // TimerHandle_t xTimerSound;
 
@@ -71,6 +73,8 @@ static void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel,
 /************************************************************************/
 uint32_t *g_sdram = (uint32_t *)BOARD_SDRAM_ADDR;
 volatile uint32_t sdram_count = 0;
+volatile char enviando = 0;
+volatile long compara = 0;
 // volatile _Bool gravando = 0;
 
 /************************************************************************/
@@ -125,13 +129,13 @@ void vTimerCallbackSound(TimerHandle_t xTimer) {
 }
 
 void but_callback(void) {
-	if (!pio_get(BUT_PIO, PIO_INPUT, BUT_IDX_MASK)) {
+	if ((!pio_get(BUT_PIO, PIO_INPUT, BUT_IDX_MASK)) && (!enviando)) {
 		RTT_init(FREQ, 6000, RTT_MR_ALMIEN | RTT_MR_RTTINCIEN);
-		
 	} else {
 		// Para de coletar o audio
 		rtt_disable_interrupt(RTT, RTT_MR_ALMIEN | RTT_MR_RTTINCIEN);
-		// xSemaphoreGiveFromISR(xSemaphoreGate, 0);
+		afec_disable_interrupt(AFEC_POT, AFEC_POT_CHANNEL);
+		xSemaphoreGiveFromISR(xSemaphoreGate, 0);
 	}
 }
 
@@ -163,11 +167,10 @@ void but_callback(void) {
     }*/
 // }
 static void AFEC_pot_callback(void) {
-	uint32_t value = afec_channel_get_value(AFEC_POT, AFEC_POT_CHANNEL);
-	printf("%d\n", value);
+	uint16_t value = afec_channel_get_value(AFEC_POT, AFEC_POT_CHANNEL);
 	BaseType_t xHigherPriorityTaskWoken = pdTRUE;
-	// xQueueSendFromISR(xQueueADC, &adc, &xHigherPriorityTaskWoken);
-	xSemaphoreGiveFromISR(xSemaphoreGate, &xHigherPriorityTaskWoken);
+	xQueueSendFromISR(xQueueAmostras, &value, &xHigherPriorityTaskWoken);
+	compara++;
 }
 
 /************************************************************************/
@@ -394,6 +397,12 @@ void task_bluetooth(void) {
 
     char button1 = '0';
     char eof = 'X';
+	*(g_sdram) = 100;
+	*(g_sdram + 1) = 200;
+	uint16_t amostra;
+	
+	printf("Primeiro valor: %d\n", *(g_sdram));
+	printf("Segundo valor: %d\n", *(g_sdram + 1));
 
     // Task não deve retornar.
     while (1) {
@@ -416,11 +425,29 @@ void task_bluetooth(void) {
             // dorme por 500 ms
             vTaskDelay(500 / portTICK_PERIOD_MS);
         }
+		if (xQueueReceive(xQueueAmostras, &amostra, 0)) {
+			*(g_sdram + sdram_count) = amostra;
+			sdram_count++;
+			printf("%d\n", amostra);
+		}
+		
         // TODO: Implementar aqui o envio de audio via bluetooth.
-        if (xSemaphoreTake(xSemaphoreGate, 0) == pdTRUE) {
-            // Aqui a lógica para enviar o audio via bluetooth.
-			// printf("ENtrou no gate\n");
-			// continue;
+		if (xSemaphoreTake(xSemaphoreGate, 0) == pdTRUE) {
+			enviando = 1;
+		}
+		
+        if ((enviando) && (uxQueueMessagesWaiting(xQueueAmostras) == 0)) {
+			/*
+			taskENTER_CRITICAL();
+			for(uint32_t i = 0; i < sdram_count; i++) {
+				printf("%d\n", *(g_sdram + i));
+				delay_ms(1);
+			}
+			taskEXIT_CRITICAL();
+			*/
+			enviando = 0;
+			printf("sdram count = %d\n", sdram_count);
+			printf("Compara = %d\n", compara);
         }
     }
 }
@@ -437,12 +464,24 @@ int main(void) {
     configure_console();
 	
 	config_AFEC_pot(AFEC_POT, AFEC_POT_ID, AFEC_POT_CHANNEL, AFEC_pot_callback);
+	
+	/* Complete SDRAM configuration */
+	pmc_enable_periph_clk(ID_SDRAMC);
+	sdramc_init((sdramc_memory_dev_t *)&SDRAM_ISSI_IS42S16100E,	sysclk_get_cpu_hz());
+	sdram_enable_unaligned_support();
+	SCB_CleanInvalidateDCache();
 
     // Cria a queue de input
     xQueueInput = xQueueCreate(10, sizeof(char));
     if (xQueueInput == NULL) {
         printf("Erro ao criar a queue de input \n");
     }
+	// Cria a fila das amostras
+	xQueueAmostras = xQueueCreate(40000, sizeof(uint16_t));
+	if (xQueueAmostras == NULL) {
+		printf("Erro ao criar a queue de amostras \n");
+	}
+	
 	
     xSemaphoreGate = xSemaphoreCreateBinary();
 	if (xSemaphoreGate == NULL)
