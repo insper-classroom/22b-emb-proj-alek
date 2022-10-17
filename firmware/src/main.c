@@ -68,8 +68,8 @@ static void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel,
 /************************************************************************/
 /* variaveis globais                                                    */
 /************************************************************************/
-uint32_t *g_sdram = (uint32_t *)BOARD_SDRAM_ADDR;
-volatile uint32_t sdram_count = 0;
+volatile uint16_t *g_sdram = (uint16_t *)BOARD_SDRAM_ADDR;
+volatile uint16_t sdram_count = 0;
 volatile char enviando = 0;
 volatile long compara = 0;
 // volatile _Bool gravando = 0;
@@ -142,7 +142,9 @@ void but_callback(void) {
 static void AFEC_pot_callback(void) {
 	uint16_t value = afec_channel_get_value(AFEC_POT, AFEC_POT_CHANNEL);
 	BaseType_t xHigherPriorityTaskWoken = pdTRUE;
-	xQueueSendFromISR(xQueueAmostras, &value, &xHigherPriorityTaskWoken);
+	//xQueueSendFromISR(xQueueAmostras, &value, &xHigherPriorityTaskWoken);
+	
+	*(g_sdram + sdram_count++) = value;
 	compara++;
 }
 
@@ -370,12 +372,12 @@ void task_bluetooth(void) {
 
     char button = '0';
     char eof = 'X';
-	*(g_sdram) = 100;
-	*(g_sdram + 1) = 200;
+	//*(g_sdram) = 100;
+	//*(g_sdram + 1) = 200;
 	uint16_t amostra;
 	
-	printf("Primeiro valor: %d\n", *(g_sdram));
-	printf("Segundo valor: %d\n", *(g_sdram + 1));
+	//printf("Primeiro valor: %d\n", *(g_sdram));
+	//printf("Segundo valor: %d\n", *(g_sdram + 1));
 
     // Task não deve retornar.
     while (1) {
@@ -409,15 +411,11 @@ void task_bluetooth(void) {
 			enviando = 1;
 		}
 		
-        if ((enviando) && (uxQueueMessagesWaiting(xQueueAmostras) == 0)) {
-			/*
-			taskENTER_CRITICAL();
-			for(uint32_t i = 0; i < sdram_count; i++) {
-				printf("%d\n", *(g_sdram + i));
-				delay_ms(1);
+      
+		 if (enviando) {
+			for (uint16_t i=0; i<sdram_count; i++){
+				printf("%d \n", *(g_sdram +i));
 			}
-			taskEXIT_CRITICAL();
-			*/
 			enviando = 0;
 			printf("sdram count = %d\n", sdram_count);
 			printf("Compara = %d\n", compara);

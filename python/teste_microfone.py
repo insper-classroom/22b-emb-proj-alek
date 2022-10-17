@@ -26,7 +26,7 @@ def play(audio_file_name):
 
 
 if __name__ == '__main__':
-    audio_file_name = 'teste_4'
+    audio_file_name = 'teste'
 
     # Read a txt file and convert it to a list of ints
     data_list = list()
