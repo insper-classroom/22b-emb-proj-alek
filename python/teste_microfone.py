@@ -12,7 +12,10 @@ def convert(data, audio_file_name):
     write(f"{audio_file_name}.wav", FREQ, src)
 
 def convert_equalized(data, audio_file_name):
-    src = np.array(data, dtype=np.float32)
+    """
+    Escreve no formato 16-bit PCM.
+    """
+    src = np.array(data, dtype=np.int16)
 
     write(f"{audio_file_name}.wav", FREQ, src)
 
@@ -23,7 +26,7 @@ def play(audio_file_name):
 
 
 if __name__ == '__main__':
-    audio_file_name = 'teste_5'
+    audio_file_name = 'teste_4'
 
     # Read a txt file and convert it to a list of ints
     data_list = list()
@@ -32,11 +35,12 @@ if __name__ == '__main__':
         for line in f:
             # convert to int
             if ("Amostra" not in line):
-                actual =  (int(line) / 2047.5) - 1
+                actual =  ((int(line) / 2047.5) - 1) * 32767 
                 data_list.append(actual)
                 # data_list.append(int(line))
 
     print(f"Tamanho da lista: {len(data_list)}")
+    print(f"Min = {min(data_list)}\nMax = {max(data_list)}")
 
     # convert(data_list, audio_file_name)
     convert_equalized(data_list, audio_file_name)
