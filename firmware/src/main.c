@@ -127,7 +127,7 @@ void vTimerCallbackSound(TimerHandle_t xTimer) {
 
 void but_callback(void) {
 	if ((!pio_get(BUT_PIO, PIO_INPUT, BUT_IDX_MASK)) && (!enviando)) {
-		RTT_init(FREQ, 6000, RTT_MR_ALMIEN | RTT_MR_RTTINCIEN);
+		RTT_init(FREQ, 0, RTT_MR_RTTINCIEN);
 		afec_enable_interrupt(AFEC_POT, AFEC_POT_CHANNEL);
 		sdram_count = 0;
 		compara = 0;
@@ -327,6 +327,8 @@ static void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel,
 void RTT_Handler(void) {
     uint32_t ul_status;
     ul_status = rtt_get_status(RTT);
+	
+	 
 
    
 	 /* IRQ due to Inc */
@@ -400,11 +402,7 @@ void task_bluetooth(void) {
             // dorme por 500 ms
             vTaskDelay(500 / portTICK_PERIOD_MS);
         }
-		if (xQueueReceive(xQueueAmostras, &amostra, 0)) {
-			*(g_sdram + sdram_count) = amostra;
-			sdram_count++;
-			printf("%d\n", amostra);
-		}
+	
 		
         // TODO: Implementar aqui o envio de audio via bluetooth.
 		if (xSemaphoreTake(xSemaphoreGate, 0) == pdTRUE) {
@@ -413,8 +411,8 @@ void task_bluetooth(void) {
 		
       
 		 if (enviando) {
-			for (uint16_t i=0; i<sdram_count; i++){
-				printf("%d \n", *(g_sdram +i));
+			for (uint16_t i = 0; i < sdram_count; i++){
+				printf("%d\n", *(g_sdram +i));
 			}
 			enviando = 0;
 			printf("sdram count = %d\n", sdram_count);
