@@ -66,8 +66,15 @@ extern QueueHandle_t xQueueInput;
 #define GATE_IDX 6
 #define GATE_IDX_MASK (1 << GATE_IDX)
 
+// Para debug da onda som
+#define TESTE_PIO PIOC
+#define TESTE_PIO_ID ID_PIOC
+#define TESTE_IDX 19
+#define TESTE_IDX_MASK (1 << TESTE_IDX)
+
+
 // Freq de amostragem
-#define FREQ 16000
+#define FREQ 4000
 
 void io_init(void);
 void but_callback(void);

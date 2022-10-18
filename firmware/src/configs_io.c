@@ -53,9 +53,14 @@ void io_init(void) {
     pmc_enable_periph_clk(BUT_PAUSE_PIO_ID);
     pmc_enable_periph_clk(BUT_RETRO_PIO_ID);
     pmc_enable_periph_clk(GATE_PIO_ID);
+    pmc_enable_periph_clk(TESTE_PIO_ID);
+    
+	
 
     // Configura Pinos
     pio_configure(LED_PIO, PIO_OUTPUT_0, LED_IDX_MASK, PIO_DEFAULT);
+    pio_configure(TESTE_PIO, PIO_OUTPUT_0, TESTE_IDX_MASK, PIO_DEFAULT);
+    
 	
     pio_configure(BUT_PIO, PIO_INPUT, BUT_IDX_MASK, PIO_PULLUP | PIO_DEBOUNCE);
 	pio_set_debounce_filter(BUT_PIO, BUT_IDX_MASK, 60);

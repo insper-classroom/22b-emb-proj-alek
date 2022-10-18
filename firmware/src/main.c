@@ -146,6 +146,7 @@ static void AFEC_pot_callback(void) {
 	
 	*(g_sdram + sdram_count++) = value;
 	compara++;
+	pio_toggle_pin_group(TESTE_PIO, TESTE_IDX_MASK);
 }
 
 /************************************************************************/
