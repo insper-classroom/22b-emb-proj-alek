@@ -58,6 +58,7 @@ extern QueueHandle_t xQueueInput;
 #define AFEC_POT AFEC0
 #define AFEC_POT_ID ID_AFEC0
 #define AFEC_POT_CHANNEL 0 // Canal do pino PD30
+#define AFEC_CHANNEL_PIN 0
 
 
 // Gate do sound detector
@@ -74,7 +75,7 @@ extern QueueHandle_t xQueueInput;
 
 
 // Freq de amostragem
-#define FREQ 4000
+#define FREQ 8000
 
 void io_init(void);
 void but_callback(void);

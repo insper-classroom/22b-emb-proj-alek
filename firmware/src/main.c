@@ -60,6 +60,7 @@ extern void vApplicationMallocFailedHook(void);
 extern void xPortSysTickHandler(void);
 void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource);
 static void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel, afec_callback_t callback);
+void TC_init(Tc * TC, int ID_TC, int TC_CHANNEL, int freq);
 
 /************************************************************************/
 /* constants                                                            */
@@ -127,16 +128,34 @@ void vTimerCallbackSound(TimerHandle_t xTimer) {
 
 void but_callback(void) {
 	if ((!pio_get(BUT_PIO, PIO_INPUT, BUT_IDX_MASK)) && (!enviando)) {
-		RTT_init(FREQ, 0, RTT_MR_RTTINCIEN);
+		// RTT_init(FREQ, 0, RTT_MR_RTTINCIEN);
+		TC_init(TC0, ID_TC0, 0, 8000);
 		afec_enable_interrupt(AFEC_POT, AFEC_POT_CHANNEL);
 		sdram_count = 0;
 		compara = 0;
 	} else {
 		// Para de coletar o audio
-		rtt_disable_interrupt(RTT, RTT_MR_ALMIEN | RTT_MR_RTTINCIEN);
+		// rtt_disable_interrupt(RTT, RTT_MR_ALMIEN | RTT_MR_RTTINCIEN);
+		// tc_disable_interrupt(TC0, 0, )
 		afec_disable_interrupt(AFEC_POT, AFEC_POT_CHANNEL);
 		xSemaphoreGiveFromISR(xSemaphoreGate, 0);
 	}
+}
+
+/**
+*  Interrupt handler for TC1 interrupt.
+*/
+void TC0_Handler(void){
+	volatile uint32_t ul_dummy;
+
+	/****************************************************************
+	* Devemos indicar ao TC que a interrup��o foi satisfeita.
+	******************************************************************/
+	ul_dummy = tc_get_status(TC0, 0);
+
+	/* Avoid compiler warning */
+	UNUSED(ul_dummy);
+
 }
 
 static void AFEC_pot_callback(void) {
@@ -242,109 +261,84 @@ int hc05_init(void) {
     usart_send_command(USART_COM, buffer_rx, 1000, "AT+PIN1298", 100);
 }
 
-/**
- * Configura RTT
- *
- * arg0 pllPreScale  : Frequ�ncia na qual o contador ir� incrementar
- * arg1 IrqNPulses   : Valor do alarme
- * arg2 rttIRQSource : Pode ser uma
- *     - 0:
- *     - RTT_MR_RTTINCIEN: Interrup��o por incremento (pllPreScale)
- *     - RTT_MR_ALMIEN : Interrup��o por alarme
- */
-void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource) {
 
-    uint16_t pllPreScale = (int)(((float)32768) / freqPrescale);
-
-    rtt_sel_source(RTT, false);
-    rtt_init(RTT, pllPreScale);
-
-    if (rttIRQSource & RTT_MR_ALMIEN) {
-        uint32_t ul_previous_time;
-        ul_previous_time = rtt_read_timer_value(RTT);
-        while (ul_previous_time == rtt_read_timer_value(RTT))
-            ;
-        rtt_write_alarm_time(RTT, IrqNPulses + ul_previous_time);
-    }
-
-    /* config NVIC */
-    NVIC_DisableIRQ(RTT_IRQn);
-    NVIC_ClearPendingIRQ(RTT_IRQn);
-    NVIC_SetPriority(RTT_IRQn, 4);
-    NVIC_EnableIRQ(RTT_IRQn);
-
-    /* Enable RTT interrupt */
-    if (rttIRQSource & (RTT_MR_RTTINCIEN | RTT_MR_ALMIEN))
-        rtt_enable_interrupt(RTT, rttIRQSource);
-    else
-        rtt_disable_interrupt(RTT, RTT_MR_RTTINCIEN | RTT_MR_ALMIEN);
-}
-
-static void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel,
-                            afec_callback_t callback) {
-  /*************************************
+static void config_ADC_TEMP(void){
+/************************************* 
    * Ativa e configura AFEC
-   *************************************/
+   *************************************/  
   /* Ativa AFEC - 0 */
-  afec_enable(afec);
+	afec_enable(AFEC0);
 
-  /* struct de configuracao do AFEC */
-  struct afec_config afec_cfg;
+	/* struct de configuracao do AFEC */
+	struct afec_config afec_cfg;
 
-  /* Carrega parametros padrao */
-  afec_get_config_defaults(&afec_cfg);
+	/* Carrega parametros padrao */
+	afec_get_config_defaults(&afec_cfg);
 
-  /* Configura AFEC */
-  afec_init(afec, &afec_cfg);
-
-  /* Configura trigger por software */
-  afec_set_trigger(afec, AFEC_TRIG_SW);
-
-  /*** Configuracao específica do canal AFEC ***/
-  struct afec_ch_config afec_ch_cfg;
-  afec_ch_get_config_defaults(&afec_ch_cfg);
-  afec_ch_cfg.gain = AFEC_GAINVALUE_0;
-  afec_ch_set_config(afec, afec_channel, &afec_ch_cfg);
-
-  /*
-  * Calibracao:
-  * Because the internal ADC offset is 0x200, it should cancel it and shift
-  down to 0.
-  */
-  afec_channel_set_analog_offset(afec, afec_channel, 0x200);
-
-  /***  Configura sensor de temperatura ***/
-  struct afec_temp_sensor_config afec_temp_sensor_cfg;
-
-  afec_temp_sensor_get_config_defaults(&afec_temp_sensor_cfg);
-  afec_temp_sensor_set_config(afec, &afec_temp_sensor_cfg);
-
-  /* configura IRQ */
-  afec_set_callback(afec, afec_channel, callback, 1);
-  NVIC_SetPriority(afec_id, 4);
-  NVIC_EnableIRQ(afec_id);
-}
-
-void RTT_Handler(void) {
-    uint32_t ul_status;
-    ul_status = rtt_get_status(RTT);
-	
-	 
-
-   
-	 /* IRQ due to Inc */
-	 if ((ul_status & RTT_SR_RTTINC) == RTT_SR_RTTINC) {
-		 // Coleta do audio do microfone usando o AFEC1
-		 afec_channel_enable(AFEC_POT, AFEC_POT_CHANNEL);
-		 afec_start_software_conversion(AFEC_POT);
-	 }
-	 
-    /* IRQ due to Alarm */
-    if ((ul_status & RTT_SR_ALMS) == RTT_SR_ALMS) {
-		// printf("ALARME\n");
+	/* Configura AFEC */
+	afec_init(AFEC0, &afec_cfg);
+  
+	/* Configura trigger por software */
+	afec_set_trigger(AFEC0, AFEC_TRIG_TIO_CH_0);
 		
-    }
+	AFEC0->AFEC_MR |= 3;
+  
+	/* configura call back */
+	afec_set_callback(AFEC0, AFEC_INTERRUPT_EOC_0,	AFEC_pot_callback, 1); 
+   
+	/*** Configuracao espec�fica do canal AFEC ***/
+	struct afec_ch_config afec_ch_cfg;
+	afec_ch_get_config_defaults(&afec_ch_cfg);
+	afec_ch_cfg.gain = AFEC_GAINVALUE_0;
+	afec_ch_set_config(AFEC0, AFEC_CHANNEL_PIN, &afec_ch_cfg);
+  
+	/*
+	* Calibracao:
+	* Because the internal ADC offset is 0x200, it should cancel it and shift
+	 down to 0.
+	 */
+	afec_channel_set_analog_offset(AFEC0, AFEC_CHANNEL_PIN, 0x200);
+
+	/***  Configura sensor de temperatura ***/
+	struct afec_temp_sensor_config afec_temp_sensor_cfg;
+
+	afec_temp_sensor_get_config_defaults(&afec_temp_sensor_cfg);
+	afec_temp_sensor_set_config(AFEC0, &afec_temp_sensor_cfg);
+
+	/* Selecina canal e inicializa convers�o */  
+	afec_channel_enable(AFEC0, AFEC_CHANNEL_PIN);
 }
+
+/**
+* Configura TimerCounter (TC) para gerar uma interrupcao no canal (ID_TC e TC_CHANNEL)
+* na taxa de especificada em freq.
+*/
+void TC_init(Tc * TC, int ID_TC, int TC_CHANNEL, int freq){
+	uint32_t ul_div;
+	uint32_t ul_tcclks;
+	uint32_t ul_sysclk = sysclk_get_cpu_hz();
+
+	pmc_enable_periph_clk(ID_TC);
+
+	/** Configura o TC para operar em  4Mhz e interrup�c�o no RC compare */
+	tc_find_mck_divisor(freq, ul_sysclk, &ul_div, &ul_tcclks, ul_sysclk);
+	
+	//PMC->PMC_SCER = 1 << 14;
+	ul_tcclks = 1;
+	
+	tc_init(TC, TC_CHANNEL, ul_tcclks
+	| TC_CMR_WAVE /* Waveform mode is enabled */
+	| TC_CMR_ACPA_SET /* RA Compare Effect: set */
+	| TC_CMR_ACPC_CLEAR /* RC Compare Effect: clear */
+	| TC_CMR_CPCTRG /* UP mode with automatic trigger on RC Compare */
+	);
+	
+	tc_write_rc(TC, TC_CHANNEL, (ul_sysclk / ul_div) / freq /8 );
+	tc_write_ra(TC, TC_CHANNEL, (ul_sysclk / ul_div) / freq / 8 / 2);
+
+	tc_start(TC, TC_CHANNEL);
+}
+
 
 /************************************************************************/
 /* TASKS                                                                */
@@ -361,9 +355,9 @@ void task_bluetooth(void) {
     // configura LEDs e Botões
     io_init();
 	
-	afec_channel_enable(AFEC_POT, AFEC_POT_CHANNEL);
-	afec_start_software_conversion(AFEC_POT);
-
+	// afec_channel_enable(AFEC_POT, AFEC_POT_CHANNEL);
+	// afec_start_software_conversion(AFEC_POT);
+	
     // Configura o timer
     /*
 	xTimerSound = xTimerCreate("TimerSound",
@@ -413,7 +407,8 @@ void task_bluetooth(void) {
       
 		 if (enviando) {
 			for (uint16_t i = 0; i < sdram_count; i++){
-				printf("%d\n", *(g_sdram +i));
+				int valor = *(g_sdram + i) >> 4;
+				printf("%d\n", valor);
 			}
 			enviando = 0;
 			printf("sdram count = %d\n", sdram_count);
@@ -433,7 +428,8 @@ int main(void) {
 
     configure_console();
 	
-	config_AFEC_pot(AFEC_POT, AFEC_POT_ID, AFEC_POT_CHANNEL, AFEC_pot_callback);
+	// config_AFEC_pot(AFEC_POT, AFEC_POT_ID, AFEC_POT_CHANNEL, AFEC_pot_callback);
+	config_ADC_TEMP();
 	
 	/* Complete SDRAM configuration */
 	pmc_enable_periph_clk(ID_SDRAMC);
@@ -447,7 +443,7 @@ int main(void) {
         printf("Erro ao criar a queue de input \n");
     }
 	// Cria a fila das amostras
-	xQueueAmostras = xQueueCreate(40000, sizeof(uint16_t));
+	xQueueAmostras = xQueueCreate(10, sizeof(uint16_t));
 	if (xQueueAmostras == NULL) {
 		printf("Erro ao criar a queue de amostras \n");
 	}
