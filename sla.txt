@@ -122,7 +122,6 @@ extern void vApplicationMallocFailedHook(void) {
 /* handlers / callbacks                                                 */
 /************************************************************************/
 
-<<<<<<< Updated upstream
 =======
 // Esse callback deve ser chamado quando o GATE ficar em estado logico baixo por 500ms.
 void vTimerCallbackSound(TimerHandle_t xTimer) {
@@ -157,7 +156,6 @@ static void AFEC_pot_callback(void) {
 	pio_toggle_pin_group(TESTE_PIO, TESTE_IDX_MASK);
 }
 
->>>>>>> Stashed changes
 /************************************************************************/
 /* funcoes                                                              */
 /************************************************************************/
@@ -489,11 +487,9 @@ void task_bluetooth(void) {
 /************************************************************************/
 
 int main(void) {
-<<<<<<< Updated upstream
 	/* Initialize the SAM system */
 	sysclk_init();
 	board_init();
-=======
     /* Initialize the SAM system */
     sysclk_init();
     board_init();
@@ -517,7 +513,6 @@ int main(void) {
     xSemaphoreGate = xSemaphoreCreateBinary();
 	if (xSemaphoreGate == NULL)
 		printf("Erro ao criar o semaforo do gate\n");
->>>>>>> Stashed changes
 
 	configure_console();
 
