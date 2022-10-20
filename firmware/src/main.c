@@ -8,16 +8,12 @@
 #include <asf.h>
 #include "conf_board.h"
 #include <string.h>
-<<<<<<< Updated upstream
 #include <configs_io.h>
-=======
 #include <math.h>
->>>>>>> Stashed changes
 
 /************************************************************************/
 /* defines                                                              */
 /************************************************************************/
-
 
 
 // usart (bluetooth ou serial)
@@ -38,10 +34,8 @@
 /* RTOS                                                                 */
 /************************************************************************/
 
-<<<<<<< Updated upstream
 #define TASK_BLUETOOTH_STACK_SIZE            (4096/sizeof(portSTACK_TYPE))
 #define TASK_BLUETOOTH_STACK_PRIORITY        (tskIDLE_PRIORITY)
-=======
 #define TASK_BLUETOOTH_STACK_SIZE (4096 / sizeof(portSTACK_TYPE))
 #define TASK_BLUETOOTH_STACK_PRIORITY (tskIDLE_PRIORITY)
 
@@ -53,7 +47,6 @@ QueueHandle_t xQueueInput;
 
 // Semaforo para o fim da captura de som
 SemaphoreHandle_t xSemaphoreGate;
->>>>>>> Stashed changes
 
 /************************************************************************/
 /* prototypes                                                           */
@@ -73,16 +66,10 @@ extern void xPortSysTickHandler(void);
 /************************************************************************/
 /* variaveis globais                                                    */
 /************************************************************************/
-<<<<<<< Updated upstream
-volatile char but_pause_flag;
-volatile char but_retro_flag;
-volatile char but_prox_flag;
-=======
 volatile uint16_t *g_sdram = (uint16_t *)BOARD_SDRAM_ADDR;
 volatile uint16_t sdram_count = 0;
 volatile char enviando = 0;
 // volatile _Bool gravando = 0;
->>>>>>> Stashed changes
 
 /************************************************************************/
 /* RTOS application HOOK                                                */
@@ -122,8 +109,6 @@ extern void vApplicationMallocFailedHook(void) {
 /* handlers / callbacks                                                 */
 /************************************************************************/
 
-<<<<<<< Updated upstream
-=======
 // Esse callback deve ser chamado quando o GATE ficar em estado logico baixo por 500ms.
 void vTimerCallbackSound(TimerHandle_t xTimer) {
     // Desabilita o RTT -> Para a captura de som.
@@ -157,7 +142,6 @@ static void AFEC_pot_callback(void) {
 	pio_toggle_pin_group(TESTE_PIO, TESTE_IDX_MASK);
 }
 
->>>>>>> Stashed changes
 /************************************************************************/
 /* funcoes                                                              */
 /************************************************************************/
@@ -350,7 +334,6 @@ void RTT_Handler(void) {
     if ((ul_status & RTT_SR_ALMS) == RTT_SR_ALMS) {
 		
     }
->>>>>>> Stashed changes
 }
 
 /************************************************************************/
@@ -369,48 +352,6 @@ void task_bluetooth(void) {
 
 	char button1 = '0';
 	char eof = 'X';
-
-<<<<<<< Updated upstream
-	// Task não deve retornar.
-	while(1) {
-		// atualiza valor do botão
-		if(pio_get(BUT_PIO, PIO_INPUT, BUT_IDX_MASK) == 0) {
-			button1 = '1';
-		}
-		else if (but_prox_flag) {
-			but_prox_flag = 0;
-			button1 = 'R';
-		}
-		else if (but_pause_flag) {
-			but_pause_flag = 0;
-			button1 = 'P';
-		}
-		else if (but_retro_flag) {
-			but_retro_flag = 0;
-			button1 = 'T';
-		}
-		else {
-			button1 = '0';
-		}
-		
-
-		// envia status botão
-		while(!usart_is_tx_ready(USART_COM)) {
-			vTaskDelay(10 / portTICK_PERIOD_MS);
-		}
-		usart_write(USART_COM, button1);
-		
-		// envia fim de pacote
-		while(!usart_is_tx_ready(USART_COM)) {
-			vTaskDelay(10 / portTICK_PERIOD_MS);
-		}
-		usart_write(USART_COM, eof);
-
-		// dorme por 500 ms
-		vTaskDelay(500 / portTICK_PERIOD_MS);
-	}
-    char button = '0';
-    char eof = 'X';
 
     // Task não deve retornar.
     while (1) {
@@ -481,7 +422,6 @@ void task_bluetooth(void) {
 			
         }
     }
->>>>>>> Stashed changes
 }
 
 /************************************************************************/
@@ -489,14 +429,9 @@ void task_bluetooth(void) {
 /************************************************************************/
 
 int main(void) {
-<<<<<<< Updated upstream
 	/* Initialize the SAM system */
 	sysclk_init();
 	board_init();
-=======
-    /* Initialize the SAM system */
-    sysclk_init();
-    board_init();
 
     configure_console();
 	
@@ -517,9 +452,7 @@ int main(void) {
     xSemaphoreGate = xSemaphoreCreateBinary();
 	if (xSemaphoreGate == NULL)
 		printf("Erro ao criar o semaforo do gate\n");
->>>>>>> Stashed changes
 
-	configure_console();
 
 	/* Create task to make led blink */
 	xTaskCreate(task_bluetooth, "BLT", TASK_BLUETOOTH_STACK_SIZE, NULL,	TASK_BLUETOOTH_STACK_PRIORITY, NULL);
