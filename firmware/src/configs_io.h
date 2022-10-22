@@ -74,7 +74,7 @@ extern QueueHandle_t xQueueInput;
 
 
 // Freq de amostragem
-#define FREQ 4000
+#define FREQ 8000
 
 void io_init(void);
 void but_callback(void);

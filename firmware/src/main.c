@@ -9,6 +9,7 @@
 #include <configs_io.h>
 // #include "sound_capture.h"
 #include <string.h>
+#include <math.h>
 
 /************************************************************************/
 /* defines                                                              */
@@ -28,6 +29,9 @@
 #define USART_COM_ID ID_USART0
 #endif
 
+#define T_MAX 4
+#define TAMANHO_MAX FREQ * T_MAX
+
 
 /************************************************************************/
 /* RTOS                                                                 */
@@ -39,8 +43,8 @@
 // Queue para inputs dos botoes
 QueueHandle_t xQueueInput;
 
-// Queue para dados do microfone
-QueueHandle_t xQueueAmostras;
+// Queue para conectar var global com sistema operacional
+QueueHandle_t xQueueCount;
 
 // Timer para terminar a captura de som
 // TimerHandle_t xTimerSound;
@@ -71,7 +75,6 @@ static void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel,
 volatile uint16_t *g_sdram = (uint16_t *)BOARD_SDRAM_ADDR;
 volatile uint16_t sdram_count = 0;
 volatile char enviando = 0;
-volatile long compara = 0;
 // volatile _Bool gravando = 0;
 
 /************************************************************************/
@@ -130,22 +133,19 @@ void but_callback(void) {
 		RTT_init(FREQ, 0, RTT_MR_RTTINCIEN);
 		afec_enable_interrupt(AFEC_POT, AFEC_POT_CHANNEL);
 		sdram_count = 0;
-		compara = 0;
 	} else {
 		// Para de coletar o audio
 		rtt_disable_interrupt(RTT, RTT_MR_ALMIEN | RTT_MR_RTTINCIEN);
 		afec_disable_interrupt(AFEC_POT, AFEC_POT_CHANNEL);
-		xSemaphoreGiveFromISR(xSemaphoreGate, 0);
+		
+		xQueueSendFromISR(xQueueCount, &sdram_count, 0);
+		// xSemaphoreGiveFromISR(xSemaphoreGate, 0);
 	}
 }
 
 static void AFEC_pot_callback(void) {
 	uint16_t value = afec_channel_get_value(AFEC_POT, AFEC_POT_CHANNEL);
-	BaseType_t xHigherPriorityTaskWoken = pdTRUE;
-	//xQueueSendFromISR(xQueueAmostras, &value, &xHigherPriorityTaskWoken);
-	
 	*(g_sdram + sdram_count++) = value;
-	compara++;
 	pio_toggle_pin_group(TESTE_PIO, TESTE_IDX_MASK);
 }
 
@@ -341,7 +341,6 @@ void RTT_Handler(void) {
 	 
     /* IRQ due to Alarm */
     if ((ul_status & RTT_SR_ALMS) == RTT_SR_ALMS) {
-		// printf("ALARME\n");
 		
     }
 }
@@ -351,7 +350,6 @@ void RTT_Handler(void) {
 /************************************************************************/
 
 void task_bluetooth(void) {
-	// afec_channel_enable(AFEC_POT, AFEC_POT_CHANNEL);
     printf("Task Bluetooth started \n");
 
     printf("Inicializando HC05 \n");
@@ -360,9 +358,6 @@ void task_bluetooth(void) {
 
     // configura LEDs e Botões
     io_init();
-	
-	afec_channel_enable(AFEC_POT, AFEC_POT_CHANNEL);
-	afec_start_software_conversion(AFEC_POT);
 
     // Configura o timer
     /*
@@ -373,51 +368,76 @@ void task_bluetooth(void) {
                                vTimerCallbackSound);
 	*/
 
-    char button = '0';
+    char button;
     char eof = 'X';
-	//*(g_sdram) = 100;
-	//*(g_sdram + 1) = 200;
-	uint16_t amostra;
-	
-	//printf("Primeiro valor: %d\n", *(g_sdram));
-	//printf("Segundo valor: %d\n", *(g_sdram + 1));
+	uint16_t count;
 
     // Task não deve retornar.
     while (1) {
         // atualiza valor do botão e envia apenas quando o valor muda atravez da fila.
         if (xQueueReceive(xQueueInput, &button, 0)) {
-            printf("Botao 1: %c \n", button);
+            // printf("Botao 1: %c \n", button);
+			
+			// Envia que o comando é um botão
+			while (!usart_is_tx_ready(USART_COM)) {
+				vTaskDelay(10 / portTICK_PERIOD_MS);
+			}
+			usart_write(USART_COM, 'b');
+      
+			// Envia qual botao esta mandando
+			while (!usart_is_tx_ready(USART_COM)) {
+				vTaskDelay(1 / portTICK_PERIOD_MS);
+			}
+			usart_write(USART_COM, button);
 
-            // envia status botão
-            while (!usart_is_tx_ready(USART_COM)) {
-                vTaskDelay(10 / portTICK_PERIOD_MS);
-            }
-            usart_write(USART_COM, button);
+			// envia fim de pacote
+			while (!usart_is_tx_ready(USART_COM)) {
+				vTaskDelay(1 / portTICK_PERIOD_MS);
+			}
+			usart_write(USART_COM, eof);
 
-            // envia fim de pacote
-            while (!usart_is_tx_ready(USART_COM)) {
-                vTaskDelay(10 / portTICK_PERIOD_MS);
-            }
-            usart_write(USART_COM, eof);
-
-            // dorme por 500 ms
-            vTaskDelay(500 / portTICK_PERIOD_MS);
+			// dorme por 500 ms
+			vTaskDelay(500 / portTICK_PERIOD_MS);
         }
 	
 		
         // TODO: Implementar aqui o envio de audio via bluetooth.
-		if (xSemaphoreTake(xSemaphoreGate, 0) == pdTRUE) {
+		if (xQueueReceive(xQueueCount, &count, 0)) {
 			enviando = 1;
-		}
-		
-      
-		 if (enviando) {
-			for (uint16_t i = 0; i < sdram_count; i++){
-				printf("%d\n", *(g_sdram +i));
-			}
+			
+			 // Envia comando som = 'S'
+			 while (!usart_is_tx_ready(USART_COM)) {
+				 vTaskDelay(10 / portTICK_PERIOD_MS);
+			 }
+			 usart_write(USART_COM, 'S');
+			 
+			 // Calcula tamanho do audio vai de 1 até 2 ^ 255
+			 char tamanho = log2(sdram_count + 1);
+			 
+			 while (!usart_is_tx_ready(USART_COM)) {
+				 vTaskDelay(10 / portTICK_PERIOD_MS);
+			 }
+			 usart_write(USART_COM, tamanho);
+			 printf("%d : %d \n", sdram_count, tamanho);
+			 
+			 
+			 for (uint16_t i = 0; i < count; i++){
+				 while (!usart_is_tx_ready(USART_COM)) {
+				 }
+
+				 char valor = *(g_sdram + i) >> 4;
+				 printf("%i : %d \n", i, valor);
+
+				 usart_write(USART_COM, valor);
+			 }
+			 
+			 // envia fim de pacote
+			 while (!usart_is_tx_ready(USART_COM)) {
+				 vTaskDelay(10 / portTICK_PERIOD_MS);
+			 }
+			 usart_write(USART_COM, eof);
+			
 			enviando = 0;
-			printf("sdram count = %d\n", sdram_count);
-			printf("Compara = %d\n", compara);
         }
     }
 }
@@ -446,12 +466,11 @@ int main(void) {
     if (xQueueInput == NULL) {
         printf("Erro ao criar a queue de input \n");
     }
-	// Cria a fila das amostras
-	xQueueAmostras = xQueueCreate(40000, sizeof(uint16_t));
-	if (xQueueAmostras == NULL) {
-		printf("Erro ao criar a queue de amostras \n");
-	}
 	
+	xQueueCount = xQueueCreate(2, sizeof(uint16_t));
+	if (xQueueCount == NULL) {
+		printf("Erro ao criar a queue de contagem\n");
+	}
 	
     xSemaphoreGate = xSemaphoreCreateBinary();
 	if (xSemaphoreGate == NULL)
