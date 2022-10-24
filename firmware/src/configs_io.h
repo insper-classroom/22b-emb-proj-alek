@@ -72,6 +72,18 @@ extern QueueHandle_t xQueueInput;
 #define TESTE_IDX 19
 #define TESTE_IDX_MASK (1 << TESTE_IDX)
 
+// Para leitura de botao power
+#define POWER_BUT_PIO PIOD
+#define POWER_BUT_ID ID_PIOD
+#define POWER_BUT_IDX 28
+#define POWER_BUT_IDX_MASK (1 << POWER_BUT_IDX)
+
+// Para o led do botao power
+#define POWER_LED_PIO PIOC
+#define POWER_LED_ID ID_PIOC
+#define POWER_LED_IDX 17
+#define POWER_LED_IDX_MASK (1 << POWER_LED_IDX)
+
 
 // Freq de amostragem
 #define FREQ 8000
@@ -82,6 +94,8 @@ void but_retro_callback(void);
 void but_prox_callback(void);
 void but_pause_callback(void);
 void gate_callback(void);
+void power_callback(void);
 // void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel, afec_callback_t callback);
+void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource);
 
 #endif /* CONFIGS_IO_H_ */

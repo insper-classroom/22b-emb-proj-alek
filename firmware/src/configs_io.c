@@ -21,6 +21,9 @@ void but_retro_callback(void) {
     xQueueSendFromISR(xQueueInput, &but, 0);
 }
 
+void power_callback(void) {
+	printf("Chega aqui!");
+}
 
 
 void gate_callback(void) {
@@ -54,14 +57,19 @@ void io_init(void) {
     pmc_enable_periph_clk(BUT_RETRO_PIO_ID);
     pmc_enable_periph_clk(GATE_PIO_ID);
     pmc_enable_periph_clk(TESTE_PIO_ID);
+	pmc_enable_periph_clk(POWER_BUT_PIO);
+	pmc_enable_periph_clk(POWER_LED_ID);
     
 	
 
     // Configura Pinos
     pio_configure(LED_PIO, PIO_OUTPUT_0, LED_IDX_MASK, PIO_DEFAULT);
     pio_configure(TESTE_PIO, PIO_OUTPUT_0, TESTE_IDX_MASK, PIO_DEFAULT);
-    
 	
+	// Configura saida do led do botao power
+	pio_configure(POWER_LED_PIO, PIO_OUTPUT_0, POWER_LED_IDX_MASK, PIO_DEFAULT);
+    
+	// Configura entradas
     pio_configure(BUT_PIO, PIO_INPUT, BUT_IDX_MASK, PIO_PULLUP | PIO_DEBOUNCE);
 	pio_set_debounce_filter(BUT_PIO, BUT_IDX_MASK, 60);
 	
@@ -73,6 +81,9 @@ void io_init(void) {
 	
     pio_configure(BUT_RETRO_PIO, PIO_INPUT, BUT_RETRO_IDX_MASK, PIO_PULLUP | PIO_DEBOUNCE);
 	pio_set_debounce_filter(BUT_RETRO_PIO, BUT_RETRO_IDX_MASK, 60);
+	
+	pio_configure(POWER_BUT_PIO, PIO_INPUT, POWER_BUT_IDX_MASK, PIO_PULLUP | PIO_DEBOUNCE);
+	pio_set_debounce_filter(POWER_BUT_PIO, POWER_BUT_IDX_MASK, 60);
 
     // Configurando o pino para ler o GATE do sound detector
     pio_configure(GATE_PIO, PIO_INPUT, GATE_IDX_MASK, PIO_DEFAULT);
@@ -109,6 +120,12 @@ void io_init(void) {
 					BUT_IDX_MASK,
 					PIO_IT_EDGE,
 					but_callback);
+					
+	pio_handler_set(POWER_BUT_PIO,
+					POWER_BUT_ID,
+					POWER_BUT_IDX_MASK,
+					PIO_IT_RISE_EDGE,
+					power_callback);
 
     // Ativa interrupção e limpa primeira IRQ gerada na ativacao
     pio_enable_interrupt(BUT_PROX_PIO, BUT_PROX_IDX_MASK);
@@ -127,6 +144,10 @@ void io_init(void) {
     // Para o GATE
     pio_enable_interrupt(GATE_PIO, GATE_IDX_MASK);
     pio_get_interrupt_status(GATE_PIO);
+	
+	// Para o botao power
+	pio_enable_interrupt(POWER_BUT_PIO, POWER_BUT_IDX_MASK);
+	pio_get_interrupt_status(POWER_BUT_PIO);
 
     // Configura NVIC para receber interrupcoes do PIO do botao start/pause
     // com prioridade 4 (quanto mais proximo de 0 maior)
@@ -145,5 +166,45 @@ void io_init(void) {
 	
 	NVIC_EnableIRQ(BUT_PIO_ID);
 	NVIC_SetPriority(BUT_PIO_ID, 4);
+	
+	NVIC_EnableIRQ(POWER_BUT_ID);
+	NVIC_SetPriority(POWER_BUT_ID, 4);
 }
 
+/**
+ * Configura RTT
+ *
+ * arg0 pllPreScale  : Frequ�ncia na qual o contador ir� incrementar
+ * arg1 IrqNPulses   : Valor do alarme
+ * arg2 rttIRQSource : Pode ser uma
+ *     - 0:
+ *     - RTT_MR_RTTINCIEN: Interrup��o por incremento (pllPreScale)
+ *     - RTT_MR_ALMIEN : Interrup��o por alarme
+ */
+void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource) {
+
+    uint16_t pllPreScale = (int)(((float)32768) / freqPrescale);
+
+    rtt_sel_source(RTT, false);
+    rtt_init(RTT, pllPreScale);
+
+    if (rttIRQSource & RTT_MR_ALMIEN) {
+        uint32_t ul_previous_time;
+        ul_previous_time = rtt_read_timer_value(RTT);
+        while (ul_previous_time == rtt_read_timer_value(RTT))
+            ;
+        rtt_write_alarm_time(RTT, IrqNPulses + ul_previous_time);
+    }
+
+    /* config NVIC */
+    NVIC_DisableIRQ(RTT_IRQn);
+    NVIC_ClearPendingIRQ(RTT_IRQn);
+    NVIC_SetPriority(RTT_IRQn, 4);
+    NVIC_EnableIRQ(RTT_IRQn);
+
+    /* Enable RTT interrupt */
+    if (rttIRQSource & (RTT_MR_RTTINCIEN | RTT_MR_ALMIEN))
+        rtt_enable_interrupt(RTT, rttIRQSource);
+    else
+        rtt_disable_interrupt(RTT, RTT_MR_RTTINCIEN | RTT_MR_ALMIEN);
+}

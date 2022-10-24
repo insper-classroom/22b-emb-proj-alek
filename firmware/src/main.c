@@ -40,6 +40,10 @@
 #define TASK_BLUETOOTH_STACK_SIZE (4096 / sizeof(portSTACK_TYPE))
 #define TASK_BLUETOOTH_STACK_PRIORITY (tskIDLE_PRIORITY)
 
+// Task para receber informacao do computador
+#define TASK_RECEIVE_BT_STACK_SIZE (4096 / sizeof(portSTACK_TYPE))
+#define TASK_RECEIVE_BT_STACK_PRIORITY (tskIDLE_PRIORITY)
+
 // Queue para inputs dos botoes
 QueueHandle_t xQueueInput;
 
@@ -48,6 +52,9 @@ QueueHandle_t xQueueCount;
 
 // Timer para terminar a captura de som
 // TimerHandle_t xTimerSound;
+
+// Timer para piscar o botao de power !
+TimerHandle_t xTimerBotao;
 
 // Semaforo para o fim da captura de som
 SemaphoreHandle_t xSemaphoreGate;
@@ -75,7 +82,6 @@ static void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel,
 volatile uint16_t *g_sdram = (uint16_t *)BOARD_SDRAM_ADDR;
 volatile uint16_t sdram_count = 0;
 volatile char enviando = 0;
-// volatile _Bool gravando = 0;
 
 /************************************************************************/
 /* RTOS application HOOK                                                */
@@ -126,6 +132,10 @@ void vTimerCallbackSound(TimerHandle_t xTimer) {
 
     // Libera o semaforo do gate.
     xSemaphoreGiveFromISR(xSemaphoreGate, 0);
+}
+
+void vTimerCallbackBotao(TimerHandle_t xTimer) {
+	pio_toggle_pin_group(POWER_LED_PIO, POWER_LED_IDX_MASK);
 }
 
 void but_callback(void) {
@@ -216,7 +226,7 @@ void usart_send_command(Usart *usart, char buffer_rx[], int bufferlen,
 void config_usart0(void) {
     sysclk_enable_peripheral_clock(ID_USART0);
     usart_serial_options_t config;
-    config.baudrate = 9600;
+    config.baudrate = 115200;
     config.charlength = US_MR_CHRL_8_BIT;
     config.paritytype = US_MR_PAR_NO;
     config.stopbits = false;
@@ -240,44 +250,6 @@ int hc05_init(void) {
     usart_send_command(USART_COM, buffer_rx, 1000, "AT", 100);
     vTaskDelay(500 / portTICK_PERIOD_MS);
     usart_send_command(USART_COM, buffer_rx, 1000, "AT+PIN1298", 100);
-}
-
-/**
- * Configura RTT
- *
- * arg0 pllPreScale  : Frequ�ncia na qual o contador ir� incrementar
- * arg1 IrqNPulses   : Valor do alarme
- * arg2 rttIRQSource : Pode ser uma
- *     - 0:
- *     - RTT_MR_RTTINCIEN: Interrup��o por incremento (pllPreScale)
- *     - RTT_MR_ALMIEN : Interrup��o por alarme
- */
-void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource) {
-
-    uint16_t pllPreScale = (int)(((float)32768) / freqPrescale);
-
-    rtt_sel_source(RTT, false);
-    rtt_init(RTT, pllPreScale);
-
-    if (rttIRQSource & RTT_MR_ALMIEN) {
-        uint32_t ul_previous_time;
-        ul_previous_time = rtt_read_timer_value(RTT);
-        while (ul_previous_time == rtt_read_timer_value(RTT))
-            ;
-        rtt_write_alarm_time(RTT, IrqNPulses + ul_previous_time);
-    }
-
-    /* config NVIC */
-    NVIC_DisableIRQ(RTT_IRQn);
-    NVIC_ClearPendingIRQ(RTT_IRQn);
-    NVIC_SetPriority(RTT_IRQn, 4);
-    NVIC_EnableIRQ(RTT_IRQn);
-
-    /* Enable RTT interrupt */
-    if (rttIRQSource & (RTT_MR_RTTINCIEN | RTT_MR_ALMIEN))
-        rtt_enable_interrupt(RTT, rttIRQSource);
-    else
-        rtt_disable_interrupt(RTT, RTT_MR_RTTINCIEN | RTT_MR_ALMIEN);
 }
 
 static void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel,
@@ -328,9 +300,6 @@ static void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel,
 void RTT_Handler(void) {
     uint32_t ul_status;
     ul_status = rtt_get_status(RTT);
-	
-	 
-
    
 	 /* IRQ due to Inc */
 	 if ((ul_status & RTT_SR_RTTINC) == RTT_SR_RTTINC) {
@@ -376,7 +345,7 @@ void task_bluetooth(void) {
     while (1) {
         // atualiza valor do botão e envia apenas quando o valor muda atravez da fila.
         if (xQueueReceive(xQueueInput, &button, 0)) {
-            // printf("Botao 1: %c \n", button);
+            printf("Botao 1: %c \n", button);
 			
 			// Envia que o comando é um botão
 			while (!usart_is_tx_ready(USART_COM)) {
@@ -426,7 +395,7 @@ void task_bluetooth(void) {
 				 }
 
 				 char valor = *(g_sdram + i) >> 4;
-				 printf("%i : %d \n", i, valor);
+				 printf("%d\n", valor);
 
 				 usart_write(USART_COM, valor);
 			 }
@@ -436,10 +405,42 @@ void task_bluetooth(void) {
 				 vTaskDelay(10 / portTICK_PERIOD_MS);
 			 }
 			 usart_write(USART_COM, eof);
+			 
 			
 			enviando = 0;
         }
     }
+}
+
+void task_receive_bt(){
+	char conectado = 0;
+	xTimerBotao = xTimerCreate("TimerBotao",
+								200 / portTICK_PERIOD_MS,
+								pdFALSE,
+								(void *)1,
+								vTimerCallbackBotao);
+								
+	xTimerStart(xTimerBotao, 0);
+								
+	while(1) {
+		// Enquanto nao termina o handshake, pisca o led
+		if (!conectado) {
+			pio_toggle_pin_group(POWER_LED_PIO, POWER_LED_IDX_MASK);
+			if (usart_is_rx_ready(USART_COM)) {
+				uint32_t dado;
+				usart_read(USART_COM, &dado);
+				if ((char) dado == 'H') {
+					while (!usart_is_tx_ready(USART_COM)) {
+						vTaskDelay(2 / portTICK_PERIOD_MS);
+					}
+					usart_write(USART_COM, 'O');
+					conectado = 1;
+					xTimerStop(xTimerBotao, 0);
+				}
+			}
+		}
+	}
+	
 }
 
 /************************************************************************/
@@ -480,6 +481,10 @@ int main(void) {
     /* Create task to make led blink */
 	if (xTaskCreate(task_bluetooth, "BLT", TASK_BLUETOOTH_STACK_SIZE, NULL, TASK_BLUETOOTH_STACK_PRIORITY, NULL) != pdPASS) {
 		printf("Failed to create task BLT\r\n");
+	}
+	
+	if (xTaskCreate(task_receive_bt, "RBLT", TASK_RECEIVE_BT_STACK_SIZE, NULL, TASK_RECEIVE_BT_STACK_PRIORITY, NULL) != pdPASS) {
+		printf("Failed to create task RBLT\r\n");
 	}
 
     /* Start the scheduler. */
