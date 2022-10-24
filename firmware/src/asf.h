@@ -102,11 +102,19 @@
 // From module: Part identification macros
 #include <parts.h>
 
+// From module: RTT - Real Time Timer
+#include <rtt.h>
+
 // From module: SAM FPU driver
 #include <fpu.h>
 
+// From module: SAM SDRAMC Driver
+#include <sdramc.h>
+
 // From module: SAME70 XPLD LED support enabled
 #include <led.h>
+
+// From module: SDRAMC configuration for IS42S16100E
 
 // From module: Sleep manager - SAM implementation
 #include <sam/sleepmgr.h>
