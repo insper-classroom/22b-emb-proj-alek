@@ -6,12 +6,7 @@ import matplotlib.pyplot as plt
 FREQ = 8_000
 
 
-def convert(data, audio_file_name):
-    src = np.array(data, dtype=np.int16)
-
-    write(f"{audio_file_name}.wav", FREQ, src)
-
-def convert_equalized(data, audio_file_name):
+def convert_to_wav(data, audio_file_name):
     """
     Escreve no formato 8-bit PCM.
     """
@@ -50,7 +45,7 @@ def read_from_bt(audio_file_name, data_list):
 
 
 if __name__ == '__main__':
-    audio_file_name = 'teste_bt_1_real'
+    audio_file_name = 'teste_bt_real'
     bluetooth = True
 
     # Read a txt file and convert it to a list of ints
@@ -67,7 +62,7 @@ if __name__ == '__main__':
     print(f"Min = {min(data_list)}\nMax = {max(data_list)}")
 
     # convert(data_list, audio_file_name)
-    convert_equalized(data_list, audio_file_name)
+    convert_to_wav(data_list, audio_file_name)
 
     tamanho_audio = len(data_list) / FREQ
     time_space = np.linspace(0, tamanho_audio, len(data_list))

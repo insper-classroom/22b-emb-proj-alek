@@ -1,9 +1,10 @@
 import serial
 import time
+from scipy.io.wavfile import write
+import numpy as np
 
 
 class SerialControllerInterface:
-
     # Protocolo
     # Primeiro byte -> commando ('S' para sons, 'b' para botões)
     # Segundo byts -> Se for som, indica tamanhdo do audio, se for botão, indica o botão
@@ -16,34 +17,59 @@ class SerialControllerInterface:
 
 
     def handshake(self):
-        while self.ser.read() != b'O':
+        while True:
             self.ser.write(b'H')
             time.sleep(0.5)
+            if self.ser.read() == b'O':
+                print("Terminou o handshake")
+                break
+
+    def convert_to_wav(self, data, audio_file_name, freq):
+        """
+        Escreve no formato 8-bit PCM.
+        """
+        src = np.array(data, dtype=np.int8)
+
+        write(f"{audio_file_name}.wav", freq, src)
 
 
     def receive(self):
         command = self.ser.read()
         if command == b'S':
+            print("Entrou no audio")
             data_list = list()
             # Por equanto, 1 byte para o tamanho do audio. porem talvez usar 4 bytes
-            tamanho = self.ser.read()
+
+            tamanho = self.ser.read(4)
+            tamanho = int.from_bytes(tamanho, 'little')
             print(tamanho)
-            for _ in tamanho:
+            end_tamanho = self.ser.read()
+            if end_tamanho != 'T':
+                print("Erro na leitura do tamanho")
+            
+            print(tamanho)
+            for _ in range(tamanho):
                 data = self.ser.read()
-                data_list.append(int(data.decode('decimal')))
+                data_list.append(int.from_bytes(data, 'little'))
                 print(data)
+        
+            data_final = data_list
         if command == b'b':
             botao = self.ser.read()
+            data_final = botao
             print(botao)
 
         eof = self.ser.read()
         if eof != b'X':
             print("Erro de protocolo")
 
+        self.handle_command(command, data_final)
+
     def handle_command(self, command, data):
         if command == b'S':
             # TODO - ler auidio e agir sobre cada um dos comandos
-            self.speech_recognizer.recognize(data)
+            audio_path = "audio"
+            self.convert_to_wav(data, audio_path, 8_000)
 
         elif command == b'b':
             try:
@@ -64,9 +90,9 @@ class SerialControllerInterface:
 
 
 if __name__ == '__main__':
-    serial_port = 'COM3'
-    baudrate = 9600
-    serial = SerialControllerInterface(serial_port, baudrate)
+    serial_port = 'COM7'
+    baudrate = 115200
+    serial_obj = SerialControllerInterface(serial_port, baudrate, None, None)
 
     while True:
-        serial.receive()
+        serial_obj.receive()

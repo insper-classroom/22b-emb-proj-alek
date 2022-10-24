@@ -226,6 +226,7 @@ void usart_send_command(Usart *usart, char buffer_rx[], int bufferlen,
 void config_usart0(void) {
     sysclk_enable_peripheral_clock(ID_USART0);
     usart_serial_options_t config;
+	// Necessita de configurar o modulo para 115200 de baudrate antes!
     config.baudrate = 115200;
     config.charlength = US_MR_CHRL_8_BIT;
     config.paritytype = US_MR_PAR_NO;
@@ -373,6 +374,7 @@ void task_bluetooth(void) {
         // TODO: Implementar aqui o envio de audio via bluetooth.
 		if (xQueueReceive(xQueueCount, &count, 0)) {
 			enviando = 1;
+			printf("Tamanho %d\n", count);
 			
 			 // Envia comando som = 'S'
 			 while (!usart_is_tx_ready(USART_COM)) {
@@ -380,14 +382,20 @@ void task_bluetooth(void) {
 			 }
 			 usart_write(USART_COM, 'S');
 			 
-			 // Calcula tamanho do audio vai de 1 até 2 ^ 255
-			 char tamanho = log2(sdram_count + 1);
+			 // 5 bytes para o tamanho
+			 char t[5];
+			 t[0] = (char) count;
+			 t[1] = (char) (count >> 8);
+			 t[2] = (char) (count >> 16);
+			 t[3] = (char) (count >> 24);
+			 t[4] = 'T';
 			 
-			 while (!usart_is_tx_ready(USART_COM)) {
-				 vTaskDelay(10 / portTICK_PERIOD_MS);
+			 for (int i = 0; i < 5; i++) {
+				 while (!usart_is_tx_ready(USART_COM)) {
+				 }
+				 usart_write(USART_COM, t[i]);
+				 printf("%d : %d \n", sdram_count, t[i]);
 			 }
-			 usart_write(USART_COM, tamanho);
-			 printf("%d : %d \n", sdram_count, tamanho);
 			 
 			 
 			 for (uint16_t i = 0; i < count; i++){
@@ -395,7 +403,6 @@ void task_bluetooth(void) {
 				 }
 
 				 char valor = *(g_sdram + i) >> 4;
-				 printf("%d\n", valor);
 
 				 usart_write(USART_COM, valor);
 			 }
@@ -434,6 +441,7 @@ void task_receive_bt(){
 						vTaskDelay(2 / portTICK_PERIOD_MS);
 					}
 					usart_write(USART_COM, 'O');
+					printf("Terminou aqui\n");
 					conectado = 1;
 					xTimerStop(xTimerBotao, 0);
 				}
