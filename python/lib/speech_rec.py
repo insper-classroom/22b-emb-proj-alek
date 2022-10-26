@@ -3,25 +3,24 @@ import speech_recognition as sr
 import unicodedata
 import subprocess
 from gtts import gTTS
-from stemmer import AlekStemmer
+from lib.stemmer import AlekStemmer
 
 class SpeechControler:
 
-    def __init__(self, audio_path, spotify_controller) -> None:
+    def __init__(self, spotify_controller) -> None:
         self.spotify = spotify_controller 
         self.r = sr.Recognizer()
-        self.audio_path = audio_path
         self.stemmer = AlekStemmer()
 
 
-    def recognize_speech(self) -> None:
+    def recognize_speech(self, audio_path) -> None:
             # obtain audio from the microphone
             # with sr.Microphone() as source:
             #     print("Say something!")
             #     audio = self.r.listen(source)
             
             # A partir de um arquivo de audio
-            with sr.AudioFile(self.audio_path) as source:
+            with sr.AudioFile(f"{audio_path}.wav") as source:
                 audio = self.r.record(source)  # read the entire audio file
 
 
@@ -70,6 +69,7 @@ class SpeechControler:
         print(f"Command: {command}")
 
         if self.stemmer.is_included_in_phrase(command, ("moda", "mod")):
+            print("Entra aqui!")
             self.spotify.start_playlist()
         elif self.stemmer.is_included_in_phrase(command, ("prox", "proxim")):
             self.spotify.next_music()

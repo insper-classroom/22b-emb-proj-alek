@@ -23,7 +23,7 @@ class SpotifyController:
         return self.sp.current_playback()['is_playing']
 
     def pause_play_toggle(self) -> None:
-        if self.is_playing:
+        if self.is_playing():
             self.pause_music()
         else:
             self.play_music()

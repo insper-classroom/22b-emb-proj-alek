@@ -12,6 +12,8 @@ class SerialControllerInterface:
 
     def __init__(self, port, baudrate, spotify_controller, speech_recognizer):
         self.ser = serial.Serial(port, baudrate=baudrate)
+        self.spotify_controller = spotify_controller
+        self.speech_recognizer = speech_recognizer
 
         self.handshake()
 
@@ -67,9 +69,10 @@ class SerialControllerInterface:
 
     def handle_command(self, command, data):
         if command == b'S':
-            # TODO - ler auidio e agir sobre cada um dos comandos
             audio_path = "audio"
             self.convert_to_wav(data, audio_path, 8_000)
+
+            self.speech_recognizer.recognize_speech(audio_path)
 
         elif command == b'b':
             try:
@@ -77,9 +80,9 @@ class SerialControllerInterface:
                     case b'P':
                         self.spotify_controller.pause_play_toggle()
                     case b'R':
-                        self.spotify_controller.next()
+                        self.spotify_controller.next_music()
                     case b'T':
-                        self.spotify_controller.previous()
+                        self.spotify_controller.previous_music()
             except Exception as e:
                 # Spotipy da throw em muito erro, que muitas vezes não interfere com o funcionamento do programa
                 print(e)

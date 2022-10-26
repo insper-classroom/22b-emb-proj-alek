@@ -4,7 +4,7 @@ from lib.serial_receiver import SerialControllerInterface
 import argparse
 
 spotify = SpotifyController()
-speech = SpeechControler("audio.wav", spotify)
+speech = SpeechControler(spotify)
 
 
 
