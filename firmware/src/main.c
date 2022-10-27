@@ -447,10 +447,9 @@ void task_receive_bt(){
 				uint32_t dado;
 				usart_read(USART_COM, &dado);
 				if ((char) dado == 'F') {
-                    # TODO: configurar um PIO para output no RELE e Led
-
-
-
+					pio_set(LED_OUT_PIO, LED_OUT_IDX_MASK);
+				} else if ((char) dado == 'f') {
+					pio_clear(LED_OUT_PIO, LED_OUT_IDX_MASK);
 				}
 			}
         }

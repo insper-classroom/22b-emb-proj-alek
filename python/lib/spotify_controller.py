@@ -23,20 +23,21 @@ class SpotifyController:
         return self.sp.current_playback()['is_playing']
 
     def pause_play_toggle(self) -> None:
-        if self.is_playing():
-            self.pause_music()
+        is_playing = self.is_playing()
+        if is_playing:
+            self.pause_music(_is_playing=is_playing)
         else:
-            self.play_music()
+            self.play_music(_is_playing=is_playing)
 
     def previous_music(self) -> None:
         self.sp.previous_track(self.device_id)
 
-    def pause_music(self) -> None:
-        if self.is_playing():
+    def pause_music(self, _is_playing=None) -> None:
+        if _is_playing or self.is_playing():
             self.sp.pause_playback(self.device_id) 
 
-    def play_music(self) -> None:
-        if not self.is_playing():
+    def play_music(self, _is_playing=True) -> None:
+        if not _is_playing or not self.is_playing():
             self.sp.start_playback(self.device_id)
 
     def start_playlist(self, playlist_id=None) -> None:

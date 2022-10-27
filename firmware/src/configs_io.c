@@ -68,6 +68,9 @@ void io_init(void) {
 	
 	// Configura saida do led do botao power
 	pio_configure(POWER_LED_PIO, PIO_OUTPUT_0, POWER_LED_IDX_MASK, PIO_DEFAULT);
+	
+	// Saida do led e rele
+	pio_configure(LED_OUT_PIO, PIO_OUTPUT_0, LED_OUT_IDX_MASK, PIO_DEFAULT);
     
 	// Configura entradas
     pio_configure(BUT_PIO, PIO_INPUT, BUT_IDX_MASK, PIO_PULLUP | PIO_DEBOUNCE);

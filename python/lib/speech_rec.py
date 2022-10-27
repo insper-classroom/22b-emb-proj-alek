@@ -58,7 +58,7 @@ class SpeechControler:
 
         print(commands)
 
-        alek_interpretations = ("alek", "alex", "alexa")
+        alek_interpretations = ("alek", "alex", "alexa", "alec")
 
         if commands[0] in alek_interpretations:
             return self.eval_command(commands)
@@ -75,14 +75,18 @@ class SpeechControler:
             return 'mfs'
         elif self.stemmer.is_included_in_phrase(command, ("moda", "mod")):
             self.spotify.start_playlist()
-        elif self.stemmer.is_included_in_phrase(command, ("prox", "proxim")):
+        elif self.stemmer.is_included_in_phrase(command, ("prox", "proxim", "pros", "seguint")):
             self.spotify.next_music()
-        elif self.stemmer.is_included_in_phrase(command, ("volt", "voltar")):
+        elif self.stemmer.is_included_in_phrase(command, ("volt", "voltar", "vol")):
             self.spotify.previous_music()
-        elif self.stemmer.is_included_in_phrase(command, ("paus", "pausar")):
+        elif self.stemmer.is_included_in_phrase(command, ("paus", "pausar", "par")):
             self.spotify.pause_music()
         elif self.stemmer.is_included_in_phrase(command, ("toc", "tocar", "lig", "play")):
             self.spotify.play_music()
+        elif self.stemmer.is_included_in_phrase(command, ("encerr", "deslig")):
+            self.say("Ok, desligando") 
+            self.spotify.pause_music()
+            return 'f'
 
     def play_audio(self, audio_path: str) -> None:
         subprocess.call(["ffplay", audio_path, "-nodisp", "-autoexit"])

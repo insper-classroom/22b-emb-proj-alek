@@ -76,6 +76,8 @@ class SerialControllerInterface:
 
             if res == 'mfs':
                 self.ser.write(b'F')
+            if res == 'f':
+                self.ser.write(b'f')
 
 
         elif command == b'b':

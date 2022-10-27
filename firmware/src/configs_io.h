@@ -84,6 +84,11 @@ extern QueueHandle_t xQueueInput;
 #define POWER_LED_IDX 17
 #define POWER_LED_IDX_MASK (1 << POWER_LED_IDX)
 
+// Para controlar o led e rele
+#define LED_OUT_PIO PIOA
+#define LED_OUT_ID ID_PIOA
+#define LED_OUT_IDX 19
+#define LED_OUT_IDX_MASK (1 << LED_OUT_IDX)
 
 // Freq de amostragem
 #define FREQ 8000
