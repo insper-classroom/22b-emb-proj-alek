@@ -365,13 +365,9 @@ void task_bluetooth(void) {
 				vTaskDelay(1 / portTICK_PERIOD_MS);
 			}
 			usart_write(USART_COM, eof);
-
-			// dorme por 500 ms
-			vTaskDelay(500 / portTICK_PERIOD_MS);
         }
 	
 		
-        // TODO: Implementar aqui o envio de audio via bluetooth.
 		if (xQueueReceive(xQueueCount, &count, 0)) {
 			enviando = 1;
 			printf("Tamanho %d\n", count);
@@ -423,7 +419,7 @@ void task_receive_bt(){
 	char conectado = 0;
 	xTimerBotao = xTimerCreate("TimerBotao",
 								200 / portTICK_PERIOD_MS,
-								pdFALSE,
+								pdTRUE,
 								(void *)1,
 								vTimerCallbackBotao);
 								
@@ -446,7 +442,18 @@ void task_receive_bt(){
 					xTimerStop(xTimerBotao, 0);
 				}
 			}
-		}
+		} else {
+			if (usart_is_rx_ready(USART_COM)) {
+				uint32_t dado;
+				usart_read(USART_COM, &dado);
+				if ((char) dado == 'F') {
+                    # TODO: configurar um PIO para output no RELE e Led
+
+
+
+				}
+			}
+        }
 	}
 	
 }

@@ -40,8 +40,8 @@ class SerialControllerInterface:
         if command == b'S':
             print("Entrou no audio")
             data_list = list()
-            # Por equanto, 1 byte para o tamanho do audio. porem talvez usar 4 bytes
 
+            # Tamanho de 4 bytes, mais um ultimo para indicar que a leitura foi feita corretamente
             tamanho = self.ser.read(4)
             tamanho = int.from_bytes(tamanho, 'little')
             print(tamanho)
@@ -72,7 +72,11 @@ class SerialControllerInterface:
             audio_path = "audio"
             self.convert_to_wav(data, audio_path, 8_000)
 
-            self.speech_recognizer.recognize_speech(audio_path)
+            res = self.speech_recognizer.recognize_speech(audio_path)
+
+            if res == 'mfs':
+                self.ser.write(b'F')
+
 
         elif command == b'b':
             try:

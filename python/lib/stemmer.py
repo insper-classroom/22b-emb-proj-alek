@@ -24,7 +24,8 @@ class AlekStemmer:
 
 if __name__ == "__main__":
     stemmer = AlekStemmer()
-    frase = "Alek liga o modao depois pausa e depois vai para a próxima música"
+    # frase = "Alek liga o modao depois pausa e depois vai para a próxima música"
+    frase = "Alek modo fim de semana"
     res = stemmer.stem_phrase(frase)
     print(res)
 

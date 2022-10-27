@@ -10,7 +10,7 @@ speech = SpeechControler(spotify)
 
 argparse = argparse.ArgumentParser(description="Alek - Assistente de voz")
 argparse.add_argument('serial_port', type=str)
-argparse.add_argument('-b', '--baudrate', type=int, default=9600)
+argparse.add_argument('-b', '--baudrate', type=int, default=115_200)
 args = argparse.parse_args()
 
 serial = SerialControllerInterface(args.serial_port, args.baudrate, spotify, speech)

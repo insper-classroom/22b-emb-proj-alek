@@ -32,7 +32,7 @@ class SpeechControler:
                 voice_input = self.r.recognize_google(audio, language="pt-BR")
                 print(f"Input reconhecido: {voice_input}")
          
-                self.parse_command(voice_input)
+                return self.parse_command(voice_input)
 
             except sr.UnknownValueError:
                 # Ola em pt-br
@@ -48,6 +48,7 @@ class SpeechControler:
         temp_address = "temp.mp3"
         tts.save(temp_address)
         self.play_audio(temp_address)
+        
 
     def parse_command(self, command: str) -> None:
         
@@ -60,7 +61,7 @@ class SpeechControler:
         alek_interpretations = ("alek", "alex", "alexa")
 
         if commands[0] in alek_interpretations:
-            self.eval_command(commands)
+            return self.eval_command(commands)
         return
 
 
@@ -68,8 +69,11 @@ class SpeechControler:
 
         print(f"Command: {command}")
 
-        if self.stemmer.is_included_in_phrase(command, ("moda", "mod")):
-            print("Entra aqui!")
+        if self.stemmer.is_included_in_phrase(command, ("fim", "seman")):
+            self.say("Iniciando modo fim de semana!")
+            self.spotify.start_playlist()
+            return 'mfs'
+        elif self.stemmer.is_included_in_phrase(command, ("moda", "mod")):
             self.spotify.start_playlist()
         elif self.stemmer.is_included_in_phrase(command, ("prox", "proxim")):
             self.spotify.next_music()
