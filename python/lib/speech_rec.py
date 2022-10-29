@@ -69,17 +69,15 @@ class SpeechControler:
 
         print(f"Command: {command}")
 
-        if self.stemmer.is_included_in_phrase(command, ("fim", "seman")):
+        if self.stemmer.is_included_in_phrase(command, ("fim", "seman", "mod", "moda")):
             self.say("Iniciando modo fim de semana!")
             self.spotify.start_playlist()
             return 'mfs'
-        elif self.stemmer.is_included_in_phrase(command, ("moda", "mod")):
-            self.spotify.start_playlist()
         elif self.stemmer.is_included_in_phrase(command, ("prox", "proxim", "pros", "seguint")):
             self.spotify.next_music()
         elif self.stemmer.is_included_in_phrase(command, ("volt", "voltar", "vol")):
             self.spotify.previous_music()
-        elif self.stemmer.is_included_in_phrase(command, ("paus", "pausar", "par")):
+        elif self.stemmer.is_included_in_phrase(command, ("paus", "pausar", "par", "pal", "pau", "paull")):
             self.spotify.pause_music()
         elif self.stemmer.is_included_in_phrase(command, ("toc", "tocar", "lig", "play")):
             self.spotify.play_music()

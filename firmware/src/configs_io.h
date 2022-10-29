@@ -12,15 +12,6 @@
 
 // Variaveis do RTOS externas
 extern QueueHandle_t xQueueInput;
-// extern TimerHandle_t xTimerSound;
-// extern volatile _Bool gravando;
-// extern SemaphoreHandle_t xSemaphoreGate;
-// extern void but_callback(void);
-// extern void AFEC_pot_Callback(void);
-// extern void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource);
-
-// Teste afec
-// static void AFEC_pot_Callback(void);
 
 
 // LEDs
@@ -60,12 +51,6 @@ extern QueueHandle_t xQueueInput;
 #define AFEC_POT_CHANNEL 0 // Canal do pino PD30
 
 
-// Gate do sound detector
-#define GATE_PIO PIOA
-#define GATE_PIO_ID ID_PIOA
-#define GATE_IDX 6
-#define GATE_IDX_MASK (1 << GATE_IDX)
-
 // Para debug da onda som
 #define TESTE_PIO PIOC
 #define TESTE_PIO_ID ID_PIOC
@@ -100,7 +85,6 @@ void but_prox_callback(void);
 void but_pause_callback(void);
 void gate_callback(void);
 void power_callback(void);
-// void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel, afec_callback_t callback);
 void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource);
 
 #endif /* CONFIGS_IO_H_ */

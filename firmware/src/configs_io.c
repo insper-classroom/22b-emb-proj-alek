@@ -7,44 +7,27 @@
 #include "configs_io.h"
 
 void but_prox_callback(void) {
+	// Manda para fila o botao de prox musica
     char but = 'R';
     xQueueSendFromISR(xQueueInput, &but, 0);
 }
 
 void but_pause_callback(void) {
+	// Manda para fila o botao de pause
     char but = 'P';
     xQueueSendFromISR(xQueueInput, &but, 0);
 }
 
 void but_retro_callback(void) {
+	// Manda para fila o botao de retroceder musica
     char but = 'T';
     xQueueSendFromISR(xQueueInput, &but, 0);
 }
 
 void power_callback(void) {
-	printf("Chega aqui!");
-}
-
-
-void gate_callback(void) {
-	/*
-    if (pio_get(GATE_PIO, PIO_INPUT, GATE_IDX_MASK)) {
-        // Aqui cabe também uma lógica para inicializar o RTT e o AFEC
-        // se não estiverem inicializados.
-		if (!gravando) {
-			printf("Inicializa o negocio!\n");
-			RTT_init(FREQ, 0, 0);
-			config_AFEC_pot(AFEC_POT, AFEC_POT_ID, AFEC_POT_CHANNEL, AFEC_pot_Callback);
-			gravando = 1;
-		}
-        // Borda de subida -> Para o timer
-        xTimerStopFromISR(xTimerSound, 0);
-    } else {
-        // Borda de descida -> Reseta o timer para fim do som
-        // Se ficar > 500 ms sem som, para a captura e envia por bluetooth.
-        xTimerResetFromISR(xTimerSound, 0);
-    }
-	*/
+	// Manda o botao de sleep
+	char but = 'L';
+	xQueueSendFromISR(xQueueInput, &but, 0);
 }
 
 void io_init(void) {
@@ -55,7 +38,6 @@ void io_init(void) {
     pmc_enable_periph_clk(BUT_PROX_PIO_ID);
     pmc_enable_periph_clk(BUT_PAUSE_PIO_ID);
     pmc_enable_periph_clk(BUT_RETRO_PIO_ID);
-    pmc_enable_periph_clk(GATE_PIO_ID);
     pmc_enable_periph_clk(TESTE_PIO_ID);
 	pmc_enable_periph_clk(POWER_BUT_PIO);
 	pmc_enable_periph_clk(POWER_LED_ID);
@@ -88,9 +70,6 @@ void io_init(void) {
 	pio_configure(POWER_BUT_PIO, PIO_INPUT, POWER_BUT_IDX_MASK, PIO_PULLUP | PIO_DEBOUNCE);
 	pio_set_debounce_filter(POWER_BUT_PIO, POWER_BUT_IDX_MASK, 60);
 
-    // Configurando o pino para ler o GATE do sound detector
-    pio_configure(GATE_PIO, PIO_INPUT, GATE_IDX_MASK, PIO_DEFAULT);
-    pio_set_debounce_filter(GATE_PIO, GATE_IDX_MASK, 60);
 
     // Interruptions handlers
     pio_handler_set(BUT_PROX_PIO,
@@ -110,13 +89,6 @@ void io_init(void) {
                     BUT_RETRO_IDX_MASK,
                     PIO_IT_RISE_EDGE,
                     but_retro_callback);
-
-    // Para o GATE
-    pio_handler_set(GATE_PIO,
-                    GATE_PIO_ID,
-                    GATE_IDX_MASK,
-                    PIO_IT_EDGE,
-                    gate_callback);
 					
 	pio_handler_set(BUT_PIO,
 					BUT_PIO_ID,
@@ -144,9 +116,6 @@ void io_init(void) {
 	pio_enable_interrupt(BUT_PIO, BUT_IDX_MASK);
 	pio_get_interrupt_status(BUT_PIO);
 
-    // Para o GATE
-    pio_enable_interrupt(GATE_PIO, GATE_IDX_MASK);
-    pio_get_interrupt_status(GATE_PIO);
 	
 	// Para o botao power
 	pio_enable_interrupt(POWER_BUT_PIO, POWER_BUT_IDX_MASK);
@@ -162,10 +131,6 @@ void io_init(void) {
 
     NVIC_EnableIRQ(BUT_RETRO_PIO_ID);
     NVIC_SetPriority(BUT_RETRO_PIO_ID, 4);
-
-    // Para o GATE
-    NVIC_EnableIRQ(GATE_PIO_ID);
-    NVIC_SetPriority(GATE_PIO_ID, 4);
 	
 	NVIC_EnableIRQ(BUT_PIO_ID);
 	NVIC_SetPriority(BUT_PIO_ID, 4);

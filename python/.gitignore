@@ -3,5 +3,5 @@ env
 *.txt
 *.wav
 .env
-.mp3
+*.mp3
 .cache

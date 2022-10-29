@@ -3,6 +3,9 @@ import time
 from scipy.io.wavfile import write
 import numpy as np
 
+# Activate DEBUG prints
+DEBUG = True
+
 
 class SerialControllerInterface:
     # Protocolo
@@ -23,8 +26,21 @@ class SerialControllerInterface:
             self.ser.write(b'H')
             time.sleep(0.5)
             if self.ser.read() == b'O':
-                print("Terminou o handshake")
+                DEBUG and print("Terminou o handshake")
                 break
+
+
+    def wait_awake(self):
+        while True:
+            button = self.ser.read()
+
+            if self.ser.read() == b'L':
+                DEBUG and print("Saiu do modo sleep")
+                eof = self.ser.read()
+                if eof != b'X':
+                    print("Erro de protocolo")
+                break
+            time.sleep(0.5)
 
     def convert_to_wav(self, data, audio_file_name, freq):
         """
@@ -37,23 +53,24 @@ class SerialControllerInterface:
 
     def receive(self):
         command = self.ser.read()
+        DEBUG and print(f"Commando recebido: {command}")
+
         if command == b'S':
-            print("Entrou no audio")
             data_list = list()
 
             # Tamanho de 4 bytes, mais um ultimo para indicar que a leitura foi feita corretamente
             tamanho = self.ser.read(4)
             tamanho = int.from_bytes(tamanho, 'little')
-            print(tamanho)
+            DEBUG and print(f"{tamanho = }")
             end_tamanho = self.ser.read()
-            if end_tamanho != 'T':
+            if end_tamanho != b'T':
                 print("Erro na leitura do tamanho")
             
             print(tamanho)
             for _ in range(tamanho):
                 data = self.ser.read()
                 data_list.append(int.from_bytes(data, 'little'))
-                print(data)
+                # DEBUG and print(data)
         
             data_final = data_list
         if command == b'b':
@@ -83,6 +100,8 @@ class SerialControllerInterface:
         elif command == b'b':
             try:
                 match data:
+                    case b'L':
+                        self.wait_awake()
                     case b'P':
                         self.spotify_controller.pause_play_toggle()
                     case b'R':

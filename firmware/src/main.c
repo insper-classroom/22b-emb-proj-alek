@@ -7,7 +7,6 @@
 
 #include <is42s16100e.h>
 #include <configs_io.h>
-// #include "sound_capture.h"
 #include <string.h>
 #include <math.h>
 
@@ -29,8 +28,7 @@
 #define USART_COM_ID ID_USART0
 #endif
 
-#define T_MAX 4
-#define TAMANHO_MAX FREQ * T_MAX
+#define DEBUG 1
 
 
 /************************************************************************/
@@ -49,9 +47,6 @@ QueueHandle_t xQueueInput;
 
 // Queue para conectar var global com sistema operacional
 QueueHandle_t xQueueCount;
-
-// Timer para terminar a captura de som
-// TimerHandle_t xTimerSound;
 
 // Timer para piscar o botao de power !
 TimerHandle_t xTimerBotao;
@@ -121,19 +116,6 @@ extern void vApplicationMallocFailedHook(void) {
 /* handlers / callbacks                                                 */
 /************************************************************************/
 
-// Esse callback deve ser chamado quando o GATE ficar em estado logico baixo por 500ms.
-void vTimerCallbackSound(TimerHandle_t xTimer) {
-    // Desabilita o RTT -> Para a captura de som.
-    // rtt_disable_interrupt(RTT, RTT_MR_ALMIEN);
-    // rtt_disable(RTT);
-
-    // Desabilita o AFEC
-    // afec_disable_interrupt(AFEC_POT, AFEC_POT_CHANNEL);
-
-    // Libera o semaforo do gate.
-    xSemaphoreGiveFromISR(xSemaphoreGate, 0);
-}
-
 void vTimerCallbackBotao(TimerHandle_t xTimer) {
 	pio_toggle_pin_group(POWER_LED_PIO, POWER_LED_IDX_MASK);
 }
@@ -147,16 +129,18 @@ void but_callback(void) {
 		// Para de coletar o audio
 		rtt_disable_interrupt(RTT, RTT_MR_ALMIEN | RTT_MR_RTTINCIEN);
 		afec_disable_interrupt(AFEC_POT, AFEC_POT_CHANNEL);
-		
 		xQueueSendFromISR(xQueueCount, &sdram_count, 0);
-		// xSemaphoreGiveFromISR(xSemaphoreGate, 0);
 	}
 }
 
 static void AFEC_pot_callback(void) {
 	uint16_t value = afec_channel_get_value(AFEC_POT, AFEC_POT_CHANNEL);
 	*(g_sdram + sdram_count++) = value;
+	// Usado para debugar a freq de amostragem
+	#ifdef DEBUG
 	pio_toggle_pin_group(TESTE_PIO, TESTE_IDX_MASK);
+	#endif // DEBUG
+
 }
 
 /************************************************************************/
@@ -319,6 +303,7 @@ void RTT_Handler(void) {
 /* TASKS                                                                */
 /************************************************************************/
 
+// Task para envio de informações para o computador
 void task_bluetooth(void) {
     printf("Task Bluetooth started \n");
 
@@ -329,24 +314,20 @@ void task_bluetooth(void) {
     // configura LEDs e Botões
     io_init();
 
-    // Configura o timer
-    /*
-	xTimerSound = xTimerCreate("TimerSound",
-                               500 / portTICK_PERIOD_MS,
-                               pdFALSE,
-                               (void *)0,
-                               vTimerCallbackSound);
-	*/
 
     char button;
     char eof = 'X';
 	uint16_t count;
+	char sleeping = 0;
 
     // Task não deve retornar.
     while (1) {
         // atualiza valor do botão e envia apenas quando o valor muda atravez da fila.
         if (xQueueReceive(xQueueInput, &button, 0)) {
-            printf("Botao 1: %c \n", button);
+			#ifdef DEBUG
+				printf("Botao 1: %c \n", button);
+			#endif // DEBUG
+
 			
 			// Envia que o comando é um botão
 			while (!usart_is_tx_ready(USART_COM)) {
@@ -365,12 +346,27 @@ void task_bluetooth(void) {
 				vTaskDelay(1 / portTICK_PERIOD_MS);
 			}
 			usart_write(USART_COM, eof);
+			
+			if (button == 'L') {
+				if (!sleeping) {
+					sleeping = 1;
+					// Entra em sleep mode
+					pio_clear(POWER_LED_PIO, POWER_LED_IDX_MASK);
+					pmc_sleep(SAM_PM_SMODE_SLEEP_WFI);
+				} else {
+					pio_set(POWER_LED_PIO, POWER_LED_IDX_MASK);
+					sleeping = 0;
+				}
+			}
         }
 	
 		
 		if (xQueueReceive(xQueueCount, &count, 0)) {
 			enviando = 1;
+			#ifdef DEBUG
 			printf("Tamanho %d\n", count);
+			#endif // DEBUG
+
 			
 			 // Envia comando som = 'S'
 			 while (!usart_is_tx_ready(USART_COM)) {
@@ -390,7 +386,9 @@ void task_bluetooth(void) {
 				 while (!usart_is_tx_ready(USART_COM)) {
 				 }
 				 usart_write(USART_COM, t[i]);
+				 #ifdef DEBUG
 				 printf("%d : %d \n", sdram_count, t[i]);
+				 #endif
 			 }
 			 
 			 
@@ -415,20 +413,20 @@ void task_bluetooth(void) {
     }
 }
 
+// Task dedicada a receber informações do computador.
 void task_receive_bt(){
 	char conectado = 0;
 	xTimerBotao = xTimerCreate("TimerBotao",
-								200 / portTICK_PERIOD_MS,
+								500 / portTICK_PERIOD_MS,
 								pdTRUE,
 								(void *)1,
 								vTimerCallbackBotao);
 								
-	xTimerStart(xTimerBotao, 0);
+	xTimerStart(xTimerBotao, 1);
 								
 	while(1) {
 		// Enquanto nao termina o handshake, pisca o led
 		if (!conectado) {
-			pio_toggle_pin_group(POWER_LED_PIO, POWER_LED_IDX_MASK);
 			if (usart_is_rx_ready(USART_COM)) {
 				uint32_t dado;
 				usart_read(USART_COM, &dado);
@@ -437,18 +435,24 @@ void task_receive_bt(){
 						vTaskDelay(2 / portTICK_PERIOD_MS);
 					}
 					usart_write(USART_COM, 'O');
-					printf("Terminou aqui\n");
+					#ifdef DEBUG
+					printf("Terminou handshake\n");
+					#endif // DEBUG
 					conectado = 1;
-					xTimerStop(xTimerBotao, 0);
+					xTimerStop(xTimerBotao, 1);
+					pio_set(POWER_LED_PIO, POWER_LED_IDX_MASK);
 				}
 			}
 		} else {
 			if (usart_is_rx_ready(USART_COM)) {
 				uint32_t dado;
 				usart_read(USART_COM, &dado);
+				// Computador iniciou modo fim de semana
 				if ((char) dado == 'F') {
 					pio_set(LED_OUT_PIO, LED_OUT_IDX_MASK);
-				} else if ((char) dado == 'f') {
+				}
+				// Computador encerrou o modo fim de semana
+				else if ((char) dado == 'f') {
 					pio_clear(LED_OUT_PIO, LED_OUT_IDX_MASK);
 				}
 			}
