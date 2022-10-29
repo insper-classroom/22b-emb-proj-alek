@@ -10,7 +10,7 @@ DEBUG = True
 class SerialControllerInterface:
     # Protocolo
     # Primeiro byte -> commando ('S' para sons, 'b' para botões)
-    # Segundo byts -> Se for som, indica tamanhdo do audio, se for botão, indica o botão
+    # segundo ate setimo byte -> Se for som, indica tamanhdo do audio, se for botão, indica o botão
     # Ultimo byte -> EOP - End of Package -> valor reservado 'X'
 
     def __init__(self, port, baudrate, spotify_controller, speech_recognizer):

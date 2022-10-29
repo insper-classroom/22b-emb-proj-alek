@@ -14,10 +14,6 @@ class SpeechControler:
 
 
     def recognize_speech(self, audio_path) -> None:
-            # obtain audio from the microphone
-            # with sr.Microphone() as source:
-            #     print("Say something!")
-            #     audio = self.r.listen(source)
             
             # A partir de um arquivo de audio
             with sr.AudioFile(f"{audio_path}.wav") as source:
@@ -26,18 +22,13 @@ class SpeechControler:
 
             # recognize speech using Google Speech Recognition
             try:
-                # for testing purposes, we're just using the default API key
-                # to use another API key, use `r.recognize_google(audio, key="GOOGLE_SPEECH_RECOGNITION_API_KEY")`
-                # instead of `r.recognize_google(audio)
                 voice_input = self.r.recognize_google(audio, language="pt-BR")
                 print(f"Input reconhecido: {voice_input}")
          
                 return self.parse_command(voice_input)
 
             except sr.UnknownValueError:
-                # Ola em pt-br
                 self.say("Eu não entendi o que voce disse")
-                print("Google Speech Recognition could not understand audio")
 
             except sr.RequestError as e:
                 print("Could not request results from Google Speech Recognition service; {0}".format(e))
@@ -66,6 +57,15 @@ class SpeechControler:
 
 
     def eval_command(self, command: str) -> None:
+        """
+        Lista de commandos: 
+        - "Alek, Modo fim de semana": Liga Led, toca a playlist e ativa o rele na placa.
+        - "Alek, Proxima musica": Toca a proxima musica da playlist.
+        - "Alek, volta": Toca a musica anterior da playlist.
+        - "Alek, Pausa": Pausa a musica.
+        - "Alek, toca" Ou "Alek, play": Toca a atual na fila do spotify.
+        - "Alek, Desliga": Desliga o rele e led na placa e a musica.
+        """
 
         print(f"Command: {command}")
 
