@@ -50,7 +50,16 @@ Enquanto isso, os leds indicam que o sistema de controle da temperatura está fu
 
 **Feedbacks**:
 - O botão power da feedback para o usuário sobre o pareamento com as luzes presentes nele, ele ficará piscando até que o pareamento seja concluído.
-- O Led dá feedback sobre o funcionamento do sistema de cooling de bebida, ligando quando a célula peltier estiver ligada, e desligando quando estiver desligada.
+- O Led dá feedback sobre o funcionamento do sistema de cooling de bebida, ligando quando o relê estiver ligado, e desligando quando estiver desligado.
+
+
+#### Lista de commandos: 
+- "Alek, Modo fim de semana": Liga Led, toca a playlist e ativa o rele na placa.
+- "Alek, Proxima musica": Toca a proxima musica da playlist.
+- "Alek, volta": Toca a musica anterior da playlist.
+- "Alek, Pausa": Pausa a musica.
+- "Alek, toca" Ou "Alek, play": Toca a atual na fila do spotify.
+- "Alek, Desliga": Desliga o rele e led na placa e a musica.
 
 ## In/OUT (3 pts)
 
@@ -59,10 +68,11 @@ Enquanto isso, os leds indicam que o sistema de controle da temperatura está fu
 2) **Botão** de ligar/desligar (power);
 3) **Botão** de pause/play da música;
 4) **Botão** de avançar música;
-5) **Botão** de retroceder música.      
+5) **Botão** de gravar o áudio;
+6) **Botão** de retroceder música.      
 
 **Out**:
-1) **Célula peltier** (capaz de esquentar e esfriar a superfície); 
+1) **Relê** Para o acionamento de um frigobar ou semelhante; 
 2) **Led** para indicar funcionamento do sistema de controle de temperatura.
 
 ### Design (2 pts)
@@ -78,5 +88,18 @@ Enquanto isso, os leds indicam que o sistema de controle da temperatura está fu
 
 3. Em seguida, no dashboard do seu app, clique em "EDIT SETTINGS".
 
-4. 
+4. Adicione em "Redirect URI's" o caminho: "http://localhost:8000" e clique em add, como mostrado na imagem a seguir:
+![Adicionando redirect uri](imgs/redirect_uris.png)
+
+5. Em seguida, monte um .env no caminho "22b-emb-proj-alek/python/lib/.env", com a seguinte estrutura:
+```
+export SPOTIPY_CLIENT_ID='SUA CLIENT ID'
+export SPOTIPY_CLIENT_SECRET='SEU CLIENT SECRET'
+export SPOTIPY_REDIRECT_URI='http://localhost:8000'
+```
+
+Estes dados se localizam no inicio do dashboard do seu projeto:
+![DADOS client](imgs/Client.png)
+
+Para ver o client secret, basta clicar no show client secret.
 
