@@ -12,15 +12,6 @@
 
 // Variaveis do RTOS externas
 extern QueueHandle_t xQueueInput;
-// extern TimerHandle_t xTimerSound;
-// extern volatile _Bool gravando;
-// extern SemaphoreHandle_t xSemaphoreGate;
-// extern void but_callback(void);
-// extern void AFEC_pot_Callback(void);
-// extern void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource);
-
-// Teste afec
-// static void AFEC_pot_Callback(void);
 
 
 // LEDs
@@ -60,18 +51,29 @@ extern QueueHandle_t xQueueInput;
 #define AFEC_POT_CHANNEL 0 // Canal do pino PD30
 
 
-// Gate do sound detector
-#define GATE_PIO PIOA
-#define GATE_PIO_ID ID_PIOA
-#define GATE_IDX 6
-#define GATE_IDX_MASK (1 << GATE_IDX)
-
 // Para debug da onda som
 #define TESTE_PIO PIOC
 #define TESTE_PIO_ID ID_PIOC
 #define TESTE_IDX 19
 #define TESTE_IDX_MASK (1 << TESTE_IDX)
 
+// Para leitura de botao power
+#define POWER_BUT_PIO PIOD
+#define POWER_BUT_ID ID_PIOD
+#define POWER_BUT_IDX 28
+#define POWER_BUT_IDX_MASK (1 << POWER_BUT_IDX)
+
+// Para o led do botao power
+#define POWER_LED_PIO PIOC
+#define POWER_LED_ID ID_PIOC
+#define POWER_LED_IDX 17
+#define POWER_LED_IDX_MASK (1 << POWER_LED_IDX)
+
+// Para controlar o led e rele
+#define LED_OUT_PIO PIOA
+#define LED_OUT_ID ID_PIOA
+#define LED_OUT_IDX 19
+#define LED_OUT_IDX_MASK (1 << LED_OUT_IDX)
 
 // Freq de amostragem
 #define FREQ 8000
@@ -82,6 +84,7 @@ void but_retro_callback(void);
 void but_prox_callback(void);
 void but_pause_callback(void);
 void gate_callback(void);
-// void config_AFEC_pot(Afec *afec, uint32_t afec_id, uint32_t afec_channel, afec_callback_t callback);
+void power_callback(void);
+void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource);
 
 #endif /* CONFIGS_IO_H_ */

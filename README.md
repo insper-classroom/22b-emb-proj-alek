@@ -68,3 +68,15 @@ Enquanto isso, os leds indicam que o sistema de controle da temperatura está fu
 ### Design (2 pts)
 
 !["Imagem do protótipo"](design.jpeg)  
+
+### Tutorial spotify:
+
+1. Entre [nesse link](https://developer.spotify.com/dashboard/) e faça login com sua conta.
+
+2. Clique em "create an app".
+![Criando o app do spotify](imgs/create_app.png)
+
+3. Em seguida, no dashboard do seu app, clique em "EDIT SETTINGS".
+
+4. 
+

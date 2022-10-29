@@ -1,1 +1,7 @@
 __pycache__/
+env
+*.txt
+*.wav
+.env
+*.mp3
+.cache
