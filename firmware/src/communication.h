@@ -9,24 +9,24 @@
 #define COMMUNICATION_H_
 // Arquivo para definir o protocolo de comunicacao entre o microcontrolador e o computador
 
+#include "configs_io.h"
+
+extern volatile uint16_t *g_sdram;
+extern volatile char enviando;
+
 typedef struct {
-    char head[4];
-    char payload[255];
-    char eop[2];
+    char comm;
+	union {
+		char button;
+		uint16_t count;
+	};
 } package;
 
-/*
-    O head é formado por -> 1 byte de tipo + 1 byte de tamanho do payload + 2 bytes de numero do pacote.
-    Esse byte de tipo pode ser:
-        0x00 -> pacote de novo som.
-        0x01 -> pacote de som incremental (continua a mandar um som que já estava enviando).
-        0x02 -> pacote de botao (representando um dos botoes do projeto).
-        0x03 -> pacote de erro
-        0x04 -> pacote de fim de envio de som (No computador -> cria o arquivo de som e interpreta comandos).
-        ... -> outros tipos de pacotes podem ser adicionados (Respostas do computador por ex).
-        0xff -> Resposta de OK.
-*/
+#define EOF 'X'
 
-package pack(char *values_array, int start_value, int payload_size, int n_payloads);
+void send_data(package pack, Usart *p_usart);
+void send_sound(uint16_t count, Usart *p_usart);
+void send_button(char button, Usart *p_usart);
+
 
 #endif /* COMMUNICATION_H_ */

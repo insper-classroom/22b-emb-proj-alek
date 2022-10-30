@@ -6,28 +6,64 @@
  */
 #include "communication.h"
 
-/*
-package pack(char *values_array, int start_value, int payload_size, int n_payloads) {
-	char head[4];
-    // Pega os dois primeiros bytes do payload e coloca no head formato little endian.
-    char n_p1 = (char)n_payloads;
-    n_payloads = n_payloads >> 8;
-    char n_p2 = (char)n_payloads;
-    // Coloca o tipo do pacote no head.
-    if (n_payloads > 0) {
-        head[0 ... 3] = {0x00, (char)payload_size, n_p1, n_p2};
-    } else {
-        head[0 ... 3] = {0x01, (char)payload_size, n_p1, n_p2};
-    }
-    // Monta o payload.
-    char payload[payload_size];
-    for (int i = 0; i < payload_size; i++) {
-        payload[i] = values_array[i + start_value];
-    }
-    // Por fim o eop.
-    char eop[] = {'A', 'Z'};
-    package ret_val = {head, payload, eop};
-    return ret_val;
+void send_data(package pack, Usart *p_usart) {
+	// Envia commando
+	while (!usart_is_tx_ready(p_usart)) {
+		vTaskDelay(10 / portTICK_PERIOD_MS);
+	}
+	usart_write(p_usart, pack.comm);
+	
+	// Dependendo do tipo de dado a enviar, usa função adequada
+	if (pack.comm == 'S') {
+		send_sound(pack.count, p_usart);
+	} else if (pack.comm == 'b') {
+		send_button(pack.button, p_usart);
+	}
+
+	
+	// envia fim de pacote
+	while (!usart_is_tx_ready(p_usart)) {
+		vTaskDelay(10 / portTICK_PERIOD_MS);
+	}
+	usart_write(p_usart, EOF);
+	
 }
-*/
+
+void send_sound(uint16_t count, Usart *p_usart) {
+	 // 5 bytes para o tamanho
+	 char t[5];
+	 t[0] = (char) count;
+	 t[1] = (char) (count >> 8);
+	 t[2] = (char) (count >> 16);
+	 t[3] = (char) (count >> 24);
+	 t[4] = 'T';
+	 
+	 for (int i = 0; i < 5; i++) {
+		 while (!usart_is_tx_ready(p_usart)) {
+		 }
+		 usart_write(p_usart, t[i]);
+		 #ifdef DEBUG
+		 printf("%d : %d \n", count, t[i]);
+		 #endif
+	 }
+	 
+	 
+	 for (uint16_t i = 0; i < count; i++){
+		 while (!usart_is_tx_ready(p_usart)) {
+		 }
+
+		 char valor = *(g_sdram + i) >> 4;
+
+		 usart_write(p_usart, valor);
+	 }
+}
+
+void send_button(char button, Usart *p_usart) {
+	// Envia qual botao esta mandando
+	while (!usart_is_tx_ready(p_usart)) {
+		vTaskDelay(1 / portTICK_PERIOD_MS);
+	}
+	usart_write(p_usart, button);
+}
+
 

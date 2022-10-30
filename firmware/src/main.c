@@ -7,6 +7,7 @@
 
 #include <is42s16100e.h>
 #include <configs_io.h>
+#include <communication.h>
 #include <string.h>
 #include <math.h>
 
@@ -316,7 +317,6 @@ void task_bluetooth(void) {
 
 
     char button;
-    char eof = 'X';
 	uint16_t count;
 	char sleeping = 0;
 
@@ -328,24 +328,10 @@ void task_bluetooth(void) {
 				printf("Botao 1: %c \n", button);
 			#endif // DEBUG
 
-			
-			// Envia que o comando é um botão
-			while (!usart_is_tx_ready(USART_COM)) {
-				vTaskDelay(10 / portTICK_PERIOD_MS);
-			}
-			usart_write(USART_COM, 'b');
-      
-			// Envia qual botao esta mandando
-			while (!usart_is_tx_ready(USART_COM)) {
-				vTaskDelay(1 / portTICK_PERIOD_MS);
-			}
-			usart_write(USART_COM, button);
-
-			// envia fim de pacote
-			while (!usart_is_tx_ready(USART_COM)) {
-				vTaskDelay(1 / portTICK_PERIOD_MS);
-			}
-			usart_write(USART_COM, eof);
+			package pack;
+			pack.comm = 'b';
+			pack.button = button;
+			send_data(pack, USART_COM);
 			
 			if (button == 'L') {
 				if (!sleeping) {
@@ -362,51 +348,16 @@ void task_bluetooth(void) {
 	
 		
 		if (xQueueReceive(xQueueCount, &count, 0)) {
-			enviando = 1;
 			#ifdef DEBUG
 			printf("Tamanho %d\n", count);
 			#endif // DEBUG
-
 			
-			 // Envia comando som = 'S'
-			 while (!usart_is_tx_ready(USART_COM)) {
-				 vTaskDelay(10 / portTICK_PERIOD_MS);
-			 }
-			 usart_write(USART_COM, 'S');
-			 
-			 // 5 bytes para o tamanho
-			 char t[5];
-			 t[0] = (char) count;
-			 t[1] = (char) (count >> 8);
-			 t[2] = (char) (count >> 16);
-			 t[3] = (char) (count >> 24);
-			 t[4] = 'T';
-			 
-			 for (int i = 0; i < 5; i++) {
-				 while (!usart_is_tx_ready(USART_COM)) {
-				 }
-				 usart_write(USART_COM, t[i]);
-				 #ifdef DEBUG
-				 printf("%d : %d \n", sdram_count, t[i]);
-				 #endif
-			 }
-			 
-			 
-			 for (uint16_t i = 0; i < count; i++){
-				 while (!usart_is_tx_ready(USART_COM)) {
-				 }
-
-				 char valor = *(g_sdram + i) >> 4;
-
-				 usart_write(USART_COM, valor);
-			 }
-			 
-			 // envia fim de pacote
-			 while (!usart_is_tx_ready(USART_COM)) {
-				 vTaskDelay(10 / portTICK_PERIOD_MS);
-			 }
-			 usart_write(USART_COM, eof);
-			 
+			enviando = 1;
+			
+			package pack;
+			pack.comm = 'S';
+			pack.count = count;
+			send_data(pack, USART_COM);
 			
 			enviando = 0;
         }
