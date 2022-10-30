@@ -718,12 +718,6 @@
     <None Include="src\ASF\sam\drivers\sdramc\sdramc.h">
       <SubType>compile</SubType>
     </None>
-    <Compile Include="src\communication.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="src\communication.h">
-      <SubType>compile</SubType>
-    </Compile>
     <None Include="src\asf.h">
       <SubType>compile</SubType>
     </None>
