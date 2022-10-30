@@ -65,10 +65,10 @@ Enquanto isso, o led indica que o sistema de controle da temperatura está funci
 
 **In**:
 1) **Sound detector**: Controle de músicas por voz do spotify, da célula de peltier, do led e possivelmente outros aplicativos;
-2) **Botão** de ligar/desligar (power);
+2) **Botão** de ligar/desligar (power) (botao com o led);
 3) **Botão** de pause/play da música;
 4) **Botão** de avançar música;
-5) **Botão** de gravar o áudio;
+5) **Botão** de gravar o áudio (**Botao da placa!**);
 6) **Botão** de retroceder música.      
 
 **Out**:
