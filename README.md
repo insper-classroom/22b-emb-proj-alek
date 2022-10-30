@@ -26,7 +26,7 @@ Donos de computador que gostariam de controlar seu computador (ênfase no spotif
 
 ### Software/Jogo 
 
-**Spotify** e **navegador**.
+**Spotify**.
 
 ### Jornada do usuários (3 pts)
 
@@ -39,8 +39,8 @@ Após isso, ele despausa a música utilizando o mesmo botão e avança para outr
 Jornada 2:       
 O usuário liga o "alek" utilizando o botão de liga/desliga, após isso, ele utiliza o reconhecimento de voz para solicitar o "modo final de semana".
 Com esse comando, sua playlist favorita começa a tocar no serviço spotify no modo aleatório. 
-Além disso, é aberto no browser do computador o site "blacktag.com" na aba de festas e finalmente é utilizado a célula peltier para iniciar o resfriamento da sua bebida ( de preferência uma cerveja).
-Enquanto isso, os leds indicam que o sistema de controle da temperatura está funcional.
+Além disso e é utilizado o relê para acionar um frigobar, para iniciar o resfriamento da sua bebida ( de preferência uma cerveja).
+Enquanto isso, o led indica que o sistema de controle da temperatura está funcional.
 
 ### Comandos/ Feedbacks (2 pts)
 **Comandos**:
@@ -79,7 +79,21 @@ Enquanto isso, os leds indicam que o sistema de controle da temperatura está fu
 
 !["Imagem do protótipo"](design.jpeg)  
 
-### Tutorial spotify:
+### Protótipo mecânico
+
+![Protótipo feito para o ALEK](imgs/Foto_prototipo.jpg)
+
+### Ligação diagrama de conexões
+
+![Conexoes com a placa e perifericos](imgs/Conexoes.png)
+
+### Demonstração Alek
+[![Thumbnail do video](http://img.youtube.com/vi/-KxQK-t3Z_g/0.jpg)](https://www.youtube.com/watch?v=-KxQK-t3Z_g "Demo Alek")
+
+### Teste com pessoa externa ao projeto
+[![Thumbnail do video](http://img.youtube.com/vi/ZwvuNNnzF1A/0.jpg)](https://youtu.be/ZwvuNNnzF1A "Teste com pessoa ext Alek")
+
+### Tutorial spotify
 
 1. Entre [nesse link](https://developer.spotify.com/dashboard/) e faça login com sua conta.
 
