@@ -117,3 +117,23 @@ Estes dados se localizam no inicio do dashboard do seu projeto:
 
 Para ver o client secret, basta clicar no show client secret.
 
+### Rodando o código.
+
+1. Faça o clone do repositório.
+
+2. Faça a montagem de acordo com o diagrama e configure o HC-06 para trabalhar com baudrate de 115200
+
+3. Faça o upload do código para o Microcontrolador.
+
+4. Instale as dependências do python
+```bash
+pip install -r requirements.txt
+```
+
+5. Conecte seu computador pelo bluetooth ao Alek
+
+6. Rode o código:
+```bash
+python ./main {PORTA COM AQUI}
+```
+Passando como argumento a porta COM utilizada pelo bluetooth.
