@@ -9,6 +9,7 @@
 #include <configs_io.h>
 #include <string.h>
 #include <math.h>
+#include "send_bt.h"
 
 /************************************************************************/
 /* defines                                                              */
@@ -29,6 +30,7 @@
 #endif
 
 #define DEBUG 1
+#define debug_print(fmt, ...) do { if (DEBUG) fprintf(stderr, fmt, __VA_ARGS__); } while (0)
 
 
 /************************************************************************/
@@ -53,6 +55,9 @@ TimerHandle_t xTimerBotao;
 
 // Semaforo para o fim da captura de som
 SemaphoreHandle_t xSemaphoreGate;
+
+// Semaforo para sinalizar que esta conectado
+SemaphoreHandle_t xSemaphoreConect;
 
 /************************************************************************/
 /* prototypes                                                           */
@@ -319,33 +324,26 @@ void task_bluetooth(void) {
     char eof = 'X';
 	uint16_t count;
 	char sleeping = 0;
+	
+	// Enquanto nao esta conectado, espera o semaforo da task_bt
+	while (1) {
+		if (xSemaphoreTake(xSemaphoreConect, 0) == pdTRUE) {
+			break;
+			debug_print("%s\n", "Inicia a task de envio");
+		}
+		vTaskDelay(100);
+	}
 
     // Task não deve retornar.
     while (1) {
         // atualiza valor do botão e envia apenas quando o valor muda atravez da fila.
         if (xQueueReceive(xQueueInput, &button, 0)) {
-			#ifdef DEBUG
-				printf("Botao 1: %c \n", button);
-			#endif // DEBUG
+			debug_print("Botao 1: %c\n", button);
 
-			
-			// Envia que o comando é um botão
-			while (!usart_is_tx_ready(USART_COM)) {
-				vTaskDelay(10 / portTICK_PERIOD_MS);
-			}
-			usart_write(USART_COM, 'b');
-      
-			// Envia qual botao esta mandando
-			while (!usart_is_tx_ready(USART_COM)) {
-				vTaskDelay(1 / portTICK_PERIOD_MS);
-			}
-			usart_write(USART_COM, button);
-
-			// envia fim de pacote
-			while (!usart_is_tx_ready(USART_COM)) {
-				vTaskDelay(1 / portTICK_PERIOD_MS);
-			}
-			usart_write(USART_COM, eof);
+			package pack;
+			pack.comm = 'b';
+			pack.button = button;
+			send_data(pack, USART_COM);
 			
 			if (button == 'L') {
 				if (!sleeping) {
@@ -362,52 +360,13 @@ void task_bluetooth(void) {
 	
 		
 		if (xQueueReceive(xQueueCount, &count, 0)) {
+			debug_print("%s %d\n", "Tamanho: ", count);
+					
 			enviando = 1;
-			#ifdef DEBUG
-			printf("Tamanho %d\n", count);
-			#endif // DEBUG
-
-			
-			 // Envia comando som = 'S'
-			 while (!usart_is_tx_ready(USART_COM)) {
-				 vTaskDelay(10 / portTICK_PERIOD_MS);
-			 }
-			 usart_write(USART_COM, 'S');
-			 
-			 // 5 bytes para o tamanho
-			 char t[5];
-			 t[0] = (char) count;
-			 t[1] = (char) (count >> 8);
-			 t[2] = (char) (count >> 16);
-			 t[3] = (char) (count >> 24);
-			 t[4] = 'T';
-			 
-			 for (int i = 0; i < 5; i++) {
-				 while (!usart_is_tx_ready(USART_COM)) {
-				 }
-				 usart_write(USART_COM, t[i]);
-				 #ifdef DEBUG
-				 printf("%d : %d \n", sdram_count, t[i]);
-				 #endif
-			 }
-			 
-			 
-			 for (uint16_t i = 0; i < count; i++){
-				 while (!usart_is_tx_ready(USART_COM)) {
-				 }
-
-				 char valor = *(g_sdram + i) >> 4;
-
-				 usart_write(USART_COM, valor);
-			 }
-			 
-			 // envia fim de pacote
-			 while (!usart_is_tx_ready(USART_COM)) {
-				 vTaskDelay(10 / portTICK_PERIOD_MS);
-			 }
-			 usart_write(USART_COM, eof);
-			 
-			
+			package pack;
+			pack.comm = 'S';
+			pack.count = count;
+			send_data(pack, USART_COM);
 			enviando = 0;
         }
     }
@@ -435,9 +394,8 @@ void task_receive_bt(){
 						vTaskDelay(2 / portTICK_PERIOD_MS);
 					}
 					usart_write(USART_COM, 'O');
-					#ifdef DEBUG
-					printf("Terminou handshake\n");
-					#endif // DEBUG
+					debug_print("%s\n", "Terminou o handshake!");
+					xSemaphoreGive(xSemaphoreConect);
 					conectado = 1;
 					xTimerStop(xTimerBotao, 1);
 					pio_set(POWER_LED_PIO, POWER_LED_IDX_MASK);
@@ -494,7 +452,10 @@ int main(void) {
     xSemaphoreGate = xSemaphoreCreateBinary();
 	if (xSemaphoreGate == NULL)
 		printf("Erro ao criar o semaforo do gate\n");
-
+	
+	xSemaphoreConect = xSemaphoreCreateBinary();
+	if (xSemaphoreConect == NULL)
+		printf("Erro ao criar o semaforo do conect\n");
 
     /* Create task to make led blink */
 	if (xTaskCreate(task_bluetooth, "BLT", TASK_BLUETOOTH_STACK_SIZE, NULL, TASK_BLUETOOTH_STACK_PRIORITY, NULL) != pdPASS) {
